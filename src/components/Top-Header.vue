@@ -29,6 +29,7 @@
                             {{ auth_name }}
                         </a>
                         <div class="dropdown-menu" aria-labelledby="userAccountDd">
+                            <router-link to="/your-delivery-location" class="dropdown-item"> Your Delivery location</router-link>
                             <a class="dropdown-item" href="#" @click="SignOut">Logout</a>
                         </div>
                     </li>
@@ -39,7 +40,7 @@
 </template>
 
 <script>
-    import { auth } from "../firebase-config"
+    import { db, auth } from "../firebase-config"
     
     export default {
         created() {
@@ -47,6 +48,13 @@
                 user => {
                     if (user) {
                         this.auth_name = user.displayName;
+                        this.$session.start();
+                        if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
+                            db.collection("users").where('uid', "==", user.uid).get().then(result => {
+                                let users_data = result.docs.map(user => { return { id: user.id } });
+                                this.$session.set('auid', users_data[0].id);
+                            });
+                        }
                     }
 
                     this.loggedIn = !!user;

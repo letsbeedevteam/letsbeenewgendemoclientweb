@@ -27,7 +27,6 @@
     import firebase from 'firebase';
     import { db } from "../firebase-config";
 
-    // const userCollection = db.collection("users");
     const restaurantCollection = db.collection("restaurants");
     const customerOrderCollection = db.collection("customer_orders");
 

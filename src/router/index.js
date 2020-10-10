@@ -8,6 +8,7 @@ import Dashboard from '../views/Dashboard.vue'
 import RestaurantView from '../views/RestaurantView.vue'
 import Order from '../views/Order.vue'
 import OrderView from '../views/OrderView.vue'
+import SetAddress from '../views/SetAddress.vue'
 
 import { auth } from '../firebase-config'
 
@@ -59,6 +60,14 @@ const routes = [
     name: 'OrderView',
     component: OrderView,
     props: true,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/your-delivery-location',
+    name: 'SetAddress',
+    component: SetAddress,
     meta: {
       requiresAuth: true
     }

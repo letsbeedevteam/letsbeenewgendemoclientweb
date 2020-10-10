@@ -6,7 +6,6 @@ import { auth } from './firebase-config'
 import 'bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import VueSession from 'vue-session'
-// import GoogleMapsApiLoader from 'google-maps-api-loader'
 
 Vue.use(VueSession)
 

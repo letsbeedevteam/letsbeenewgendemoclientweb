@@ -41,6 +41,7 @@
             </p>
         </form>
 
+<p id="token-result"></p>
     </div>
     
 </template>
@@ -53,7 +54,7 @@ const userCollection = db.collection("users");
 
 export default {
     created() {
-        this.$session.start()
+        this.$session.start();
     },
     name: "Login",
     data() {
@@ -80,7 +81,7 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
                     
-                    this.checkUser(result.user.uid, result.user.displayName, "customer", "");
+                    this.checkUser(result.user.uid, result.user.displayName, "customer", null);
 
                     this.$router.replace({name: "Dashboard"});
                 },
@@ -95,7 +96,7 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
 
-                    this.checkUser(result.user.uid, result.user.displayName, "customer", "");
+                    this.checkUser(result.user.uid, result.user.displayName, "customer", null);
                     
                     this.$router.replace({name: "Dashboard"});
                 },
@@ -104,7 +105,6 @@ export default {
                 }
             )
         },
-        
         checkUser: function(user_id, name, type, address) {
             userCollection.where('uid', "==", user_id).get().then(result => {
                 if (result.empty) {

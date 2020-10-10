@@ -61,14 +61,14 @@
                         <div class="chat-messages" v-if="order.chats && order.rider_id && Object.keys(rider).length > 0" >
                             <div v-for="chat in order.chats" :key="chat.created" class="chat-message">
                                 <div v-if="chat.user_id == rider.id" class="text-left">
-                                    <div><small>{{ rider.name }}</small></div>
+                                    <div class="chat-user-name">{{ rider.name }}</div>
                                     <div>{{ chat.message }}</div>
-                                    <div><small>{{ formatFBtimestamp(chat.created_at) }}</small></div>
+                                    <div class="chat-user-date">{{ formatFBtimestamp(chat.created_at) }}</div>
                                 </div>
                                 <div v-else class="text-right">
-                                    <div><small>{{ user.name }} </small></div>
+                                    <div class="chat-user-name">You </div>
                                     <div>{{ chat.message }}</div>
-                                    <div><small>{{ formatFBtimestamp(chat.created_at) }}</small></div>
+                                    <div class="chat-user-date">{{ formatFBtimestamp(chat.created_at) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -85,8 +85,11 @@
             </div>
 
             <div class="col-4">
-                <!-- <img src="/images/google-map-sample.PNG" alt="" class="img-fluid"> -->
                 <div id="map" ref="map"></div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" @click="updateDriverMarker"> Update driver marker</button>
+                </div>
             </div>
         </div>
     </div>
@@ -114,9 +117,51 @@
                 orderStatus: ORDERSTATUS,
                 rider: {},
                 message: "",
-                user: "",
-                map:null
+                rider_marker: null
             }
+        },
+        created() {
+            this.orderDoc = customerOrderCollection.doc(this.order_id)
+            this.orderDoc.onSnapshot(
+                result => {
+                    if (!result.exists) {
+                        alert("Not Found");
+                        this.$router.replace({name: "Dashboard"});
+                    }
+
+                    this.order = result.data();
+
+                    restaurantCollection.doc(this.order.restaurant_id).get().then(
+                        (result) => {
+                            if (!result.exists) {
+                                alert("Invalid Restaurant");
+                                this.$router.replace({name: "Dashboard"});
+                            }
+
+                            this.restaurant = {id: result.id, ...result.data()};
+
+                            userCollection.doc(this.order.user_id).get().then(
+                                (result) => {
+                                    // this.rider = {id: result.id, ...result.data()}
+                                    var user = result.data();
+                                    this.initMap(
+                                        { lat: user.location.latitude, lng: user.location.longitude },
+                                        { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
+                                    );
+                                }
+                            );
+                        }
+                    );
+
+                    if (this.order.rider_id) {
+                        userCollection.doc(this.order.rider_id).get().then(
+                            (result) => {
+                                this.rider = {id: result.id, ...result.data()}
+                            }
+                        );
+                    }
+                }
+            );
         },
         methods: {
             formatFBtimestamp: function(timestamp) {
@@ -144,52 +189,53 @@
                 });
 
                 this.message = "";
+            },
+            initMap: function(origin, destination) {
+                var directionsService = new window.google.maps.DirectionsService();
+                var directionsRenderer = new window.google.maps.DirectionsRenderer({suppressMarkers: true});
+                var map = new window.google.maps.Map(this.$refs["map"], {
+                    center: { lat: 15.1450545, lng: 120.5894371},
+                    zoom: 10,
+                    streetViewControl: false,
+                    mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+                    disableDefaultUI: true
+                });
+
+                var userMarker = new window.google.maps.Marker({
+                    label: "You",
+                    title: "You",
+                    map: map,
+                });
+                this.rider_marker = new window.google.maps.Marker({
+                    title: "Let's Bee Driver",
+                    icon: 'http://localhost:8080/images/driver.png',
+                    map: map,
+                });
+
+                directionsRenderer.setMap(map);
+                directionsService.route(
+                    {
+                        origin: origin,
+                        destination: destination,
+                        travelMode: window.google.maps.TravelMode.DRIVING,
+                    },
+                    (response, status) => {
+                        if (status === "OK") {
+                            directionsRenderer.setDirections(response);
+                            var leg = response.routes[ 0 ].legs[ 0 ];
+                            userMarker.setPosition(leg.start_location);
+                            this.rider_marker.setPosition(leg.end_location);
+
+                        } else {
+                            window.alert("Directions request failed due to " + status);
+                        }
+                    }
+                );
+            },
+            updateDriverMarker: function() { // sample moving rider
+                this.rider_marker.setPosition(new window.google.maps.LatLng( 15.163311792454815, 120.55535166729865 ));
             }
         },
-        created() {
-            this.orderDoc = customerOrderCollection.doc(this.order_id)
-            this.orderDoc.onSnapshot(
-                result => {
-                    if (!result.exists) {
-                        alert("Not Found");
-                        this.$router.replace({name: "Dashboard"});
-                    }
-
-                    this.order = result.data();
-
-                    restaurantCollection.doc(this.order.restaurant_id).get().then(
-                        (result) => {
-                            if (!result.exists) {
-                                alert("Invalid Restaurant");
-                                this.$router.replace({name: "Dashboard"});
-                            }
-
-                            this.restaurant = {id: result.id, ...result.data()};
-                        }
-                    );
-
-                    if (this.order.rider_id) {
-                        userCollection.doc(this.order.rider_id).get().then(
-                            (result) => {
-                                this.rider = {id: result.id, ...result.data()}
-                            }
-                        );
-                    }
-
-                    userCollection.doc(this.order.user_id).get().then(
-                        (result) => {
-                            this.user = {id: result.id, ...result.data()}
-                        }
-                    )
-                }
-            );
-        },
-        mounted() {
-            this.map = new window.google.maps.Map(this.$refs["map"], {
-                center: { lat: -25.344, lng: 131.036},
-                zoom: 4
-            })
-        }
         
     }
 
@@ -203,6 +249,17 @@
     }
     .chat-box .chat-messages {
         height: 550px;
+    }
+    .chat-box .chat-message {
+        background-color: rgba(0,0,0,.03);
+        margin-bottom: 0.5em;
+        padding: 0.5em;
+    }
+    .chat-box .chat-message .chat-user-name {
+        font-size: 0.75em;
+    }
+    .chat-box .chat-message .chat-user-date {
+        font-size: 0.5em;
     }
     .chat-box .chat-input {
         height: 50px;
