@@ -29,26 +29,30 @@
     import { db } from "../firebase-config";
     import { ORDERSTATUS } from '../orderStatus';
 
-    const orderCollection = db.collection("customer_orders");
-
     export default {
         data() {
             return {
                 orders: [],
                 orderStatus: ORDERSTATUS,
+                orderRef: null,
             }
         },
         created() {
             this.$session.start();
             let auid = this.$session.get("auid");
 
-            orderCollection.where("user_id", "==" , auid).onSnapshot(
+            this.orderRef = db.collection("customer_orders").where("user_id", "==" , auid).onSnapshot(
                 (result) => {
                     this.orders = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
                     });
                 }
-            )
+            );
+        },
+        beforeDestroy() {
+            this.orders = [];
+            this.orderStatus = [];
+            this.orderRef();
         }
     }
 

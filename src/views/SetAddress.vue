@@ -3,7 +3,7 @@
 
         <h1>Update your Delivery Address</h1>
 
-        <div id="map" ref="map"></div>
+        <div id="map" ref="setAddress"></div>
 
         <div class="text-right mt-3">
             <button type="button" v-bind:class="[btnClass, saveLocation ? '' : 'disabled']" @click="updateLocation"> Save</button>
@@ -17,7 +17,7 @@
     import firebase from 'firebase';
 
     const userCollection = db.collection("users");
-    var position = {lat: 15.1450545, lng: 120.5894371};
+    // var position = {lat: 15.1450545, lng: 120.5894371};
 
     export default {
         data() {
@@ -25,7 +25,8 @@
                 auth: null,
                 authRef: null,
                 btnClass: 'btn btn-primary',
-                saveLocation: false
+                saveLocation: false,
+                position: {lat: 15.1450545, lng: 120.5894371}
             }
         },
         created() {
@@ -35,30 +36,35 @@
                 (result) => {
                     this.auth = {id: result.id, ...result.data()} 
                     if (this.auth.location !== null) {
-                        position.lat = this.auth.location.latitude;
-                        position.lng = this.auth.location.longitude;
+                        this.position.lat = this.auth.location.latitude;
+                        this.position.lng = this.auth.location.longitude;
                     }
                 }
             );
         },
         mounted() {
+            var mapEl = document.getElementById("map");
+            if (mapEl) {
+                mapEl.setAttribute("ref", "setAddress");
+            }
+
             var _this = this;
-            var map = new window.google.maps.Map(this.$refs["map"], {
-                center: position,
+            var map = new window.google.maps.Map(this.$refs.setAddress, {
+                center: this.position,
                 zoom: 14,
                 streetViewControl: false,
                 mapTypeId: window.google.maps.MapTypeId.ROADMAP,
                 disableDefaultUI: true 
             });
 
-            var infoWindow = new window.google.maps.InfoWindow({content: 'Your place', position: position});
+            var infoWindow = new window.google.maps.InfoWindow({content: 'Your place', position: this.position});
             map.addListener('click', function(mapsMouseEvent) {
                 infoWindow.close();
                 infoWindow = new window.google.maps.InfoWindow({content: 'Your place', position: mapsMouseEvent.latLng});
                 infoWindow.open(map);
 
-                position.lat = mapsMouseEvent.latLng.lat();
-                position.lng = mapsMouseEvent.latLng.lng();
+                _this.position.lat = mapsMouseEvent.latLng.lat();
+                _this.position.lng = mapsMouseEvent.latLng.lng();
                 
                 _this.saveLocation = true;
             });
@@ -69,7 +75,7 @@
             updateLocation: function() {
                 if (this.saveLocation) {
                     this.authRef.update({
-                        location: new firebase.firestore.GeoPoint(position.lat, position.lng)
+                        location: new firebase.firestore.GeoPoint(this.position.lat, this.position.lng)
                     }).then(() => {
                         alert("successfully updated");
                     });
@@ -77,7 +83,10 @@
                     alert("invalid request");
                 }
             },
-            
+        },
+        beforeDestroy() {
+            this.auth = null;
+            this.authRef = null;
         }
     }
 </script>

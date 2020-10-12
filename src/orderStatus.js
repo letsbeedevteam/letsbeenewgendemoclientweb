@@ -1,4 +1,5 @@
 const ORDERSTATUS = [
+    "",
     "pending",
     "restaurant acccepted",
     "restaurant declined",

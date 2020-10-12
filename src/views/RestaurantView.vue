@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+    <div class="container" v-if="restaurant">
         <h1>{{ restaurant.name }}</h1>
         <p v-html="restaurant.description"></p>
 
@@ -27,23 +27,19 @@
     import firebase from 'firebase';
     import { db } from "../firebase-config";
 
-    const userCollection = db.collection("users");
-    const restaurantCollection = db.collection("restaurants");
-    const customerOrderCollection = db.collection("customer_orders");
-
     export default {
         data() {
             return {
                 restaurant_id: this.$route.params.restaurant_id,
-                restaurant: {},
+                restaurant: null,
                 auth: null
             }
         },
         created() {
-            restaurantCollection.doc(this.restaurant_id).get().then(
+            db.collection("restaurants").doc(this.restaurant_id).get().then(
                 (result) => {
                     if (result.empty) {
-                        alert("Not Found");
+                        alert("Restaurant Not Found");
                         this.$router.replace({name: "Dashboard"});
                     }
                     this.restaurant = {id: result.id, ...result.data()};
@@ -51,15 +47,16 @@
             );
             this.$session.start();
             
-            userCollection.doc(this.$session.get("auid")).get()
-                .then((result) => {
+            db.collection("users").doc(this.$session.get("auid")).get().then(
+                (result) => {
                     if (result.empty) {
-                        alert("No User Found");
+                        alert("User not Found");
                         this.$router.replace({name: "Dashboard"});
                     }
 
                     this.auth = {id: result.id, ...result.data()};
-                });
+                }
+            );
         },
         methods: {
             orderMenu: function(menu_name, menu_price) {
@@ -68,14 +65,15 @@
                     alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
                     return;
                 }
-                
+
+                var customerOrderCollection = db.collection("customer_orders");
                 customerOrderCollection.where("user_id", "==", this.auth.id).where("status", "in", [1, 2, 4,]).get().then(
                     (result) => {
                         if (!result.empty) {
                             alert("Invalid Request. You're order still on proccess"); 
                             return false;
                         } 
-
+console.log(result);
                         var matrix = new window.google.maps.DistanceMatrixService();
                         var _this = this;
                         matrix.getDistanceMatrix({
@@ -107,7 +105,7 @@
                                         delivered_time: null,
                                         delivery_fee: deliveryFee,
                                         user_id: _this.auth.id,
-                                        chats: null
+                                        chats: []
                                     });
     
                                     alert("Successfully ordered");
@@ -116,8 +114,12 @@
                         );
                     }
                 );
-                
+
             }
+        },
+        beforeDestroy() {
+            this.restaurant = null;
+            this.auth = null;
         }
     }
 </script>

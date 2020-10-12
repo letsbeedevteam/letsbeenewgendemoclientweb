@@ -3,10 +3,10 @@
         <h1>Order</h1>
         <small>ID: {{ order_id }}</small>
 
-        <div class="row">
+        <div class="row" v-if="restaurant && order">
             <div class="col-8">
                 <h3>Order Information</h3>
-                <table class="table table-stripped">
+                <table class="table table-stripped" >
                     <tbody>
                         <tr>
                             <td>Restaurant</td>
@@ -19,6 +19,10 @@
                         <tr>
                             <td>Ordered Time</td>
                             <td>{{ formatFBtimestamp(order.ordered_time) }}</td>
+                        </tr>
+                        <tr v-if="order.status == 3 && order.reason">
+                            <td>Reason</td>
+                            <td>{{ order.reason }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -59,10 +63,10 @@
                     </tbody>
                 </table>
 
-                <div class="card bg-light mb-3 w-100">
+                <div class="card bg-light mb-3 w-100" v-if="order.chats && order.rider_id && Object.keys(rider).length > 0">
                     <div class="card-header">Chats</div>
                     <div class="card-body chat-box">
-                        <div class="chat-messages" v-if="order.chats && order.rider_id && Object.keys(rider).length > 0" >
+                        <div class="chat-messages">
                             <div v-for="chat in order.chats" :key="chat.created" class="chat-message">
                                 <div v-if="chat.user_id == rider.id" class="text-left">
                                     <div class="chat-user-name">{{ rider.name }}</div>
@@ -89,7 +93,7 @@
             </div>
 
             <div class="col-4">
-                <div id="map" ref="map"></div>
+                <div id="map" ref="orderMap"></div>
 
                 <div class="mt-3">
                     <button type="button" class="btn btn-primary" @click="updateDriverMarker"> Update driver marker</button>
@@ -105,30 +109,24 @@
     import { ORDERSTATUS } from '../orderStatus';
     import firebase from 'firebase';
 
-    var validateDateNum = function(n) { return (n < 10 ? '0' : '') + n; }
-    var mapLoaded = false;
-
-    const userCollection = db.collection("users");
-    const restaurantCollection = db.collection("restaurants");
-    const customerOrderCollection = db.collection("customer_orders");
-
-
     export default {
         data() {
             return {
                 order_id: this.$route.params.order_id,
-                order: {},
-                orderDoc: {},
-                restaurant: {},
                 orderStatus: ORDERSTATUS,
-                rider: {},
+                order: null,
+                orderDoc: null,
+                restaurant: null,
+                rider: null,
                 message: "",
-                rider_marker: null
+                rider_marker: null,
+                orderRef: null
             }
         },
         created() {
-            this.orderDoc = customerOrderCollection.doc(this.order_id)
-            this.orderDoc.onSnapshot(
+            var userCollection = db.collection("users");
+            this.orderDoc = db.collection("customer_orders").doc(this.order_id)
+            this.orderRef = this.orderDoc.onSnapshot(
                 result => {
                     if (!result.exists) {
                         alert("Not Found");
@@ -137,7 +135,7 @@
 
                     this.order = result.data();
 
-                    restaurantCollection.doc(this.order.restaurant_id).get().then(
+                    db.collection("restaurants").doc(this.order.restaurant_id).get().then(
                         (result) => {
                             if (!result.exists) {
                                 alert("Invalid Restaurant");
@@ -148,15 +146,11 @@
 
                             userCollection.doc(this.order.user_id).get().then(
                                 (result) => {
-                                    // this.rider = {id: result.id, ...result.data()}
                                     var user = result.data();
-                                    if (!mapLoaded) {
-                                        this.initMap(
-                                            { lat: user.location.latitude, lng: user.location.longitude },
-                                            { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
-                                        );
-                                        mapLoaded = true;
-                                    }
+                                    this.initMap(
+                                        { lat: user.location.latitude, lng: user.location.longitude },
+                                        { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
+                                    );
                                 }
                             );
                         }
@@ -172,7 +166,16 @@
                 }
             );
         },
+        mounted() {
+            var mapEl = document.getElementById("map");
+            if (mapEl) {
+                mapEl.setAttribute("ref", "orderMap");
+            }
+        },
         methods: {
+            validateDateNum: function(n) { 
+                return (n < 10 ? '0' : '') + n; 
+            },
             formatFBtimestamp: function(timestamp) {
                 if (!timestamp) {
                     return "";
@@ -181,8 +184,8 @@
                 var t = new Date(1970, 0, 1);
                 t.setSeconds(timestamp.seconds);
 
-                return validateDateNum(t.getDate()) + "/" + validateDateNum(t.getMonth() + 1) + "/" + t.getFullYear() + " " + 
-                    validateDateNum(t.getHours()) + ":" + validateDateNum(t.getMinutes()) + ":" + validateDateNum(t.getSeconds());
+                return this.validateDateNum(t.getDate()) + "/" + this.validateDateNum(t.getMonth() + 1) + "/" + t.getFullYear() + " " + 
+                    this.validateDateNum(t.getHours()) + ":" + this.validateDateNum(t.getMinutes()) + ":" + this.validateDateNum(t.getSeconds());
             },
             sendMessage: function() {
                 if (!this.message) {
@@ -202,7 +205,7 @@
             initMap: function(origin, destination) {
                 var directionsService = new window.google.maps.DirectionsService();
                 var directionsRenderer = new window.google.maps.DirectionsRenderer({suppressMarkers: true});
-                var map = new window.google.maps.Map(this.$refs["map"], {
+                var map = new window.google.maps.Map(this.$refs.orderMap, {
                     center: { lat: 15.1450545, lng: 120.5894371},
                     zoom: 10,
                     streetViewControl: false,
@@ -245,6 +248,15 @@
                 this.rider_marker.setPosition(new window.google.maps.LatLng( 15.163311792454815, 120.55535166729865 ));
             }
         },
+        beforeDestroy() {
+            this.order = null;
+            this.orderDoc = null;
+            this.restaurant = null;
+            this.rider = null;
+            this.message = "";
+            this.rider_marker = null;
+            this.orderRef();
+        }
         
     }
 

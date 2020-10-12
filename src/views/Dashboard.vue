@@ -20,8 +20,6 @@
 
     import { db } from "../firebase-config";
 
-    const restaurantCollection = db.collection("restaurants");
-
     export default {
         data() {
             return {
@@ -29,13 +27,16 @@
             }
         },
         created() {
-            restaurantCollection.get().then(
+            db.collection("restaurants").get().then(
                 (result) => {
                     this.restaurants = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
                     });
                 }
             )
+        },
+        beforeDestroy() {
+            this.restaurants = [];
         }
     }
 </script>

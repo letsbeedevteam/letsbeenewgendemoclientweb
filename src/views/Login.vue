@@ -50,18 +50,18 @@
 import firebase from "firebase";
 import { auth, db } from "../firebase-config";
 
-const userCollection = db.collection("users");
-
 export default {
-    created() {
-        this.$session.start();
-    },
     name: "Login",
     data() {
         return {
             email: "",
-            password: ""
+            password: "",
+            userCollection: null,
         }
+    },
+    created() {
+        this.$session.start();
+        this.userCollection = db.collection("users");
     },
     methods: {
         login: function() {
@@ -107,9 +107,9 @@ export default {
             )
         },
         checkUser: function(user_id, name, type, address) {
-            userCollection.where('uid', "==", user_id).get().then(result => {
+            this.userCollection.where('uid', "==", user_id).get().then(result => {
                 if (result.empty) {
-                    userCollection.add({
+                    this.userCollection.add({
                         uid: user_id,
                         name: name,
                         type: type,
@@ -126,7 +126,11 @@ export default {
             });
         }
     },
-
+    beforeDestroy() {
+        this.userCollection = null;
+        this.email = null;
+        this.password = null;
+    }
 }
 </script>
 

@@ -51,27 +51,33 @@
             }
         },
         register: function() {
-            auth.createUserWithEmailAndPassword(this.email, this.password)
-                .then(
-                    result => {
-                        db.collection("users")
-                            .add({
-                                uid: result.user.uid,
-                                name: this.name,
-                                type: "customer",
-                                address: this.address,
-                                order_status: "enabled"
-                            }).then(() => {
-                                alert("Successfully Registered");
-                                this.$router.replace({name: "Login"});
-                            }).catch((error) => {
-                                alert("Something went wrong, please contact us. - " + error);
-                            });
-                    },
-                    err => {
-                        alert(err);
-                    }
-                );
+            auth.createUserWithEmailAndPassword(this.email, this.password).then(
+                (result) => {
+                    console.log(result);
+                    db.collection("users")
+                        .add({
+                            uid: result.user.uid,
+                            name: this.name,
+                            type: "customer",
+                            address: this.address,
+                            order_status: "enabled"
+                        }).then(() => {
+                            alert("Successfully Registered");
+                            this.$router.replace({name: "Login"});
+                        }).catch((error) => {
+                            alert("Something went wrong, please contact us. - " + error);
+                        });
+                },
+                err => {
+                    alert(err);
+                }
+            );
+        },
+        beforeDestroy() {
+            this.name =  "";
+            this.email =  "";
+            this.password =  "";
+            this.address =  "";
         }
     }
 </script>
