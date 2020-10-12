@@ -27,6 +27,7 @@
     import firebase from 'firebase';
     import { db } from "../firebase-config";
 
+    const userCollection = db.collection("users");
     const restaurantCollection = db.collection("restaurants");
     const customerOrderCollection = db.collection("customer_orders");
 
@@ -35,7 +36,7 @@
             return {
                 restaurant_id: this.$route.params.restaurant_id,
                 restaurant: {},
-                auid: ""
+                auth: null
             }
         },
         created() {
@@ -49,36 +50,73 @@
                 }
             );
             this.$session.start();
-            this.auid = this.$session.get("auid");
+            
+            userCollection.doc(this.$session.get("auid")).get()
+                .then((result) => {
+                    if (result.empty) {
+                        alert("No User Found");
+                        this.$router.replace({name: "Dashboard"});
+                    }
+
+                    this.auth = {id: result.id, ...result.data()};
+                });
         },
         methods: {
             orderMenu: function(menu_name, menu_price) {
                 
-                customerOrderCollection
-                    .where("user_id", "==", this.auid) // auid means user document id NOT uid
-                    .where("status", "in", [1, 2, 4,]).get().then((result) => { // check if the user have pending order
+                if (this.auth.location == null) {
+                    alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
+                    return;
+                }
+                
+                customerOrderCollection.where("user_id", "==", this.auth.id).where("status", "in", [1, 2, 4,]).get().then(
+                    (result) => {
                         if (!result.empty) {
-                            alert("Invalid Request. You're order still on proccess"); // wait the order to be delivered to be able to order again
-                        } else {
-                            customerOrderCollection.add({
-                                menu_orders: {
-                                    name: menu_name,
-                                    price: menu_price
-                                },
-                                reason: "",
-                                restaurant_id: this.restaurant_id,
-                                status: 1,
-                                ordered_time: firebase.firestore.Timestamp.fromDate(new Date()),
-                                restaurant_pick_time: null,
-                                rider_pick_time: null,
-                                rider_id: null,
-                                delivered_time: null,
-                                user_id: this.auid,
-                                chats: null
-                            });
-                            alert("Successfully ordered");
-                        }
-                    })
+                            alert("Invalid Request. You're order still on proccess"); 
+                            return false;
+                        } 
+
+                        var matrix = new window.google.maps.DistanceMatrixService();
+                        var _this = this;
+                        matrix.getDistanceMatrix({
+                                origins: [new window.google.maps.LatLng(this.auth.location.latitude, this.auth.location.longitude)],
+                                destinations: [new window.google.maps.LatLng(this.restaurant.location.latitude , this.restaurant.location.longitude)],
+                                travelMode: window.google.maps.TravelMode.DRIVING,
+                            }, function(response, status) {
+                                
+                                if (status != "OK") {
+                                    alert("Invalid Request, Google Map can't get the distance, please try again");
+                                    return false;
+                                }
+
+                                var deliveryFee = Math.ceil(response.rows[0].elements[0].distance.value / 100) * 5,
+                                totalPrice = deliveryFee + menu_price;
+                                if (confirm("Order Details\nName: " + menu_name + "\nPrice: " + menu_price + "\nDelivery Fee: P " + deliveryFee + "\nTotal Price: P " + totalPrice)) {
+                                    customerOrderCollection.add({
+                                        menu_orders: {
+                                            name: menu_name,
+                                            price: menu_price
+                                        },
+                                        reason: "",
+                                        restaurant_id: _this.restaurant_id,
+                                        status: 1,
+                                        ordered_time: firebase.firestore.Timestamp.fromDate(new Date()),
+                                        restaurant_pick_time: null,
+                                        rider_pick_time: null,
+                                        rider_id: null,
+                                        delivered_time: null,
+                                        delivery_fee: deliveryFee,
+                                        user_id: _this.auth.id,
+                                        chats: null
+                                    });
+    
+                                    alert("Successfully ordered");
+                                }
+                            }
+                        );
+                    }
+                );
+                
             }
         }
     }

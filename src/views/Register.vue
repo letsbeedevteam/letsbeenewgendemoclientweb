@@ -17,19 +17,19 @@
             
             <div class="form-group">
                 <label for="inputName" class="sr-only">First Name</label>
-                <input type="email" id="inputName" class="form-control" placeholder="Name" required v-model="name">
+                <input type="text" id="inputName" class="form-control" placeholder="Name" required v-model="name">
             </div>
 
             <div class="form-group">
                 <label for="inputAddress" class="sr-only">Address</label>
-                <input type="email" id="inputAddress" class="form-control" placeholder="Address" required v-model="address">
+                <input type="text" id="inputAddress" class="form-control" placeholder="Address" required v-model="address">
             </div>
 
             <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
 
             <p class="mt-3">
                 Already have an Account? 
-                <router-link to="/sign-in">Sign In</router-link>
+                <router-link to="/login">Login</router-link>
             </p>
         </form>
        

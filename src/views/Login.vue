@@ -92,6 +92,7 @@ export default {
         },
         signInWithFacebook: function() {
             var provider = new firebase.auth.FacebookAuthProvider();
+            provider.addScope('email');
 
             auth.signInWithPopup(provider).then(
                 (result) => {
@@ -113,7 +114,8 @@ export default {
                         name: name,
                         type: type,
                         address: address,
-                        order_status: "enabled"
+                        order_status: "enabled",
+                        location: null
                     }).then(users => {
                         this.$session.set('auid', users.id);
                     })

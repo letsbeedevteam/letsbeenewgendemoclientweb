@@ -7,21 +7,16 @@
 
 <script>
   import TopHeader from "./components/Top-Header"
-  import { GOOGLE } from './config'
+  import { GOOGLE } from "./config"
 
   export default {
-    data() {
-      return {
-        isGoogleMap: false
-      }
-    },
     components: {'top-header': TopHeader},
     mounted() {
-      if (!this.isGoogleMap) {
-        let googleMapScript = document.createElement('script')
+      if (!document.getElementById("googleMapScript")) {
+        let googleMapScript = document.createElement('script');
+        googleMapScript.setAttribute("id", "googleMapScript");
         googleMapScript.setAttribute('src', 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE.map.key);
         document.head.appendChild(googleMapScript);
-        this.isGoogleMap = true;
       }
     }
   }

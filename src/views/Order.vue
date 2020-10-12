@@ -41,7 +41,6 @@
         created() {
             this.$session.start();
             let auid = this.$session.get("auid");
-            console.log(auid); 
 
             orderCollection.where("user_id", "==" , auid).onSnapshot(
                 (result) => {

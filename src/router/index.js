@@ -85,10 +85,15 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(x => x.meta.requiresAuth)
 
   if (requiresAuth && !auth.currentUser) {
-    next('/login')
-  } else {
-    next()
+    next('/login');
   }
+  
+  if (auth.currentUser && to.name == "Login") {
+    next('/dashboard');
+  }
+
+  next()
+  
 })
 
 

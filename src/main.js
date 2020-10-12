@@ -9,7 +9,7 @@ import VueSession from 'vue-session'
 
 Vue.use(VueSession)
 
-Vue.config.productionTip = false
+Vue.config.productionTip = false;
 
 let app
 auth.onAuthStateChanged(() => {

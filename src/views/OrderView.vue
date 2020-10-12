@@ -31,8 +31,12 @@
                             <td><span>&#8369;</span> {{ order.menu_orders.price }}</td>
                         </tr>
                         <tr>
+                            <td>Delivery Fee</td>
+                            <td><span>&#8369;</span> {{ order.delivery_fee }}</td>
+                        </tr>
+                        <tr>
                             <td>Total</td>
-                            <td><span>&#8369;</span> {{ order.menu_orders.price }}</td>
+                            <td><span>&#8369;</span> {{ order.menu_orders.price + order.delivery_fee }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -102,10 +106,12 @@
     import firebase from 'firebase';
 
     var validateDateNum = function(n) { return (n < 10 ? '0' : '') + n; }
+    var mapLoaded = false;
 
     const userCollection = db.collection("users");
     const restaurantCollection = db.collection("restaurants");
     const customerOrderCollection = db.collection("customer_orders");
+
 
     export default {
         data() {
@@ -144,10 +150,13 @@
                                 (result) => {
                                     // this.rider = {id: result.id, ...result.data()}
                                     var user = result.data();
-                                    this.initMap(
-                                        { lat: user.location.latitude, lng: user.location.longitude },
-                                        { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
-                                    );
+                                    if (!mapLoaded) {
+                                        this.initMap(
+                                            { lat: user.location.latitude, lng: user.location.longitude },
+                                            { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
+                                        );
+                                        mapLoaded = true;
+                                    }
                                 }
                             );
                         }
