@@ -114,8 +114,8 @@ export default {
                         name: name,
                         type: type,
                         address: address,
-                        order_status: "enabled",
-                        location: null
+                        location: null,
+                        notification_token: null
                     }).then(users => {
                         this.$session.set('auid', users.id);
                     })

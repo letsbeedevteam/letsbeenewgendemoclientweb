@@ -22,7 +22,42 @@
                 </ul>
                 <ul v-else class="navbar-nav">
                     <li class="nav-item">
-                        <router-link to="/orders" class="nav-link">Orders</router-link>
+                        <router-link to="/orders" class="nav-link"><i class="fas fa-shopping-cart"></i></router-link>
+                    </li>
+                    <li class="nav-item dropdown" v-if="notifications.length > 0">
+                        <a class="nav-link" href="#" id="orderDd" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-bell"></i>
+                            <i v-if="newNotification" class="new"></i>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li class="head text-light bg-dark">
+                                <div class="row">
+                                    <div class="col-lg-12 col-sm-12 col-12">
+                                        <span>Notifications ({{ notifications.length }})</span>
+                                        <a href="#" class="float-right text-light">Mark all as read</a>
+                                    </div>
+                                </div>
+                            </li>
+                            <li v-for="notification in notifications" :key="notification.id" v-bind:class="'notification-box' + (notification.status ? ' active' : '')">
+                                <div class="nb-link" @click="openNotification(notification.id)">
+                                    <strong class="text-info">{{ notification.title }}</strong>
+                                    <div class="nb-content">{{ notification.body }}</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown" v-else>
+                        <a class="nav-link" href="#" id="orderDd" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-bell"></i>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li class="head text-light bg-dark">
+                                <span>Notifications (0)</span>
+                            </li>
+                            <li class="notification-box">
+                                <div class="opacity-mh text-center"> No Notifications</div>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userAccountDd" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -40,19 +75,60 @@
 </template>
 
 <script>
-    import { db, auth } from "../firebase-config"
-    
+    import { db, auth, messaging } from "../firebase-config"
+
     export default {
+        data() {
+            return {
+                loggedIn: false,
+                auth_name: "",
+                newNotification: false,
+                notification_token: "",
+                notifications: []
+            };
+        },
         created() {
             auth.onAuthStateChanged(
                 user => {
                     if (user) {
                         this.auth_name = user.displayName;
                         this.$session.start();
+                        let userCollection = db.collection("users");
+                        
                         if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
-                            db.collection("users").where('uid', "==", user.uid).get().then(result => {
+                            userCollection.where('uid', "==", user.uid).get().then(result => {
                                 let users_data = result.docs.map(user => { return { id: user.id } });
-                                this.$session.set('auid', users_data[0].id);
+                                let user_id = users_data[0].id;
+                                this.$session.set('auid', user_id);
+
+                                messaging.getToken().then((currentToken) => {
+                                    if (!currentToken) {
+                                        alert("No Instance ID token available. ")
+                                        return false;
+                                    }
+                                    this.notification_token = currentToken;
+
+                                    if (currentToken !== users_data[0].notification_token) {
+                                        userCollection.doc('user_id').update({
+                                            notification_token: currentToken
+                                        });
+                                    }
+
+                                }).catch((err) => {
+                                    console.log('An error occurred while retrieving token. ', err);
+                                });
+
+                                messaging.onMessage((payload) => {
+                                    let meta = JSON.parse(payload.data.meta);
+                                    this.notifications.unshift({
+                                        id: meta.id,
+                                        type: payload.data.type,
+                                        title: payload.notification.title,
+                                        body: payload.notification.body,
+                                        status: true,    
+                                    });
+                                    this.newNotification = true;
+                                });
                             });
                         }
                     }
@@ -60,12 +136,6 @@
                     this.loggedIn = !!user;
                 }
             )
-        },
-        data() {
-            return {
-                loggedIn: false,
-                auth_name: ""
-            };
         },
         methods: {
             SignOut: function() {
@@ -78,11 +148,34 @@
                         console.log(err);
                     }
                 )
+            },
+            validateNotifications: function() {
+                let status = false;
+                this.notifications.forEach((notification) => {
+                    if (notification.status) {
+                        status = true;
+                        return notification;
+                    }
+                });
+                this.newNotification = status;
+
+            },
+            openNotification: function(notification_id) {
+                // console.log(this.$router.currentRoute);
+                this.notifications.forEach((notification) => {
+                    if (notification.id == notification_id) {
+                        notification.status = false;
+                        this.validateNotifications();
+                        if (this.$router.currentRoute != '/' + notification.type + '/' + notification.id) {
+                            this.$router.push('/' + notification.type + '/' + notification.id);
+                        }
+                    }
+                });
             }
+        },
+        beforeDestroy() {
+            this.loggedIn = false;
+            this.auth_name = "";
         }
     }
 </script>
-
-<style lang="scss" scoped>
-
-</style>

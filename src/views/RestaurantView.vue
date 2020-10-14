@@ -73,7 +73,7 @@
                             alert("Invalid Request. You're order still on proccess"); 
                             return false;
                         } 
-console.log(result);
+
                         var matrix = new window.google.maps.DistanceMatrixService();
                         var _this = this;
                         matrix.getDistanceMatrix({

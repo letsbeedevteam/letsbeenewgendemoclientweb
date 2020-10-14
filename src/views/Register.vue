@@ -60,7 +60,8 @@
                             name: this.name,
                             type: "customer",
                             address: this.address,
-                            order_status: "enabled"
+                            location: null,
+                            notification_token: null
                         }).then(() => {
                             alert("Successfully Registered");
                             this.$router.replace({name: "Login"});
