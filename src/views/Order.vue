@@ -26,7 +26,7 @@
 </template>
 
 <script>
-    import { db } from "../firebase-config";
+    import { orderCollection } from "../firebase-config";
     import { ORDERSTATUS } from '../orderStatus';
 
     export default {
@@ -41,7 +41,7 @@
             this.$session.start();
             let auid = this.$session.get("auid");
 
-            this.orderRef = db.collection("customer_orders").where("user_id", "==" , auid).onSnapshot(
+            this.orderRef = orderCollection.where("user_id", "==" , auid).onSnapshot(
                 (result) => {
                     this.orders = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
@@ -57,7 +57,3 @@
     }
 
 </script>
-
-<style lang="scss" scoped>
-
-</style>

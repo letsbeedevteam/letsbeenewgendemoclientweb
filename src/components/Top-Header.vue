@@ -29,7 +29,7 @@
                             <i class="fa fa-bell"></i>
                             <i v-if="newNotification" class="new"></i>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dm-notification">
                             <li class="head text-light bg-dark">
                                 <div class="row">
                                     <div class="col-lg-12 col-sm-12 col-12">
@@ -88,54 +88,58 @@
             };
         },
         created() {
-            auth.onAuthStateChanged(
-                user => {
-                    if (user) {
-                        this.auth_name = user.displayName;
-                        this.$session.start();
-                        let userCollection = db.collection("users");
-                        
-                        if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
-                            userCollection.where('uid', "==", user.uid).get().then(result => {
-                                let users_data = result.docs.map(user => { return { id: user.id } });
-                                let user_id = users_data[0].id;
-                                this.$session.set('auid', user_id);
 
-                                messaging.getToken().then((currentToken) => {
-                                    if (!currentToken) {
-                                        alert("No Instance ID token available. ")
-                                        return false;
-                                    }
-                                    this.notification_token = currentToken;
+            auth.onAuthStateChanged((user) => {
+                this.loggedIn = !!user;
 
-                                    if (currentToken !== users_data[0].notification_token) {
-                                        userCollection.doc('user_id').update({
-                                            notification_token: currentToken
-                                        });
-                                    }
+                if (!user) {
+                    return false;
+                }
+                let userCollection = db.collection("users");
+                this.auth_name = user.displayName;
+            
+                this.$session.start();
+                userCollection.where('uid', "==", user.uid).get().then(result => {
+                    let users_data = result.docs.map(user => { return { id: user.id } });
+                    
+                    let user_id = users_data[0].id;
 
-                                }).catch((err) => {
-                                    console.log('An error occurred while retrieving token. ', err);
-                                });
-
-                                messaging.onMessage((payload) => {
-                                    let meta = JSON.parse(payload.data.meta);
-                                    this.notifications.unshift({
-                                        id: meta.id,
-                                        type: payload.data.type,
-                                        title: payload.notification.title,
-                                        body: payload.notification.body,
-                                        status: true,    
-                                    });
-                                    this.newNotification = true;
-                                });
-                            });
-                        }
+                    if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
+                        this.$session.set('auid', user_id);
                     }
 
-                    this.loggedIn = !!user;
-                }
-            )
+                    messaging.getToken().then((currentToken) => {
+                        if (!currentToken) {
+                            alert("No Instance ID token available. ")
+                            return false;
+                        }
+
+                        this.notification_token = currentToken;
+
+                        if (currentToken !== users_data[0].notification_token) {
+                            userCollection.doc(user_id).update({
+                                notification_token: currentToken
+                            });
+                        }
+
+                    }).catch((err) => {
+                        console.log('An error occurred while retrieving token. ', err);
+                    });
+
+                    messaging.onMessage((payload) => {
+                        let meta = JSON.parse(payload.data.meta);
+                        this.notifications.unshift({
+                            id: meta.id,
+                            type: payload.data.type,
+                            title: payload.notification.title,
+                            body: payload.notification.body,
+                            status: true,    
+                        });
+                        this.newNotification = true;
+                    });
+                });
+
+            });
         },
         methods: {
             SignOut: function() {
@@ -161,7 +165,6 @@
 
             },
             openNotification: function(notification_id) {
-                // console.log(this.$router.currentRoute);
                 this.notifications.forEach((notification) => {
                     if (notification.id == notification_id) {
                         notification.status = false;

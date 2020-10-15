@@ -47,8 +47,8 @@
 </template>
 
 <script>
-import firebase from "firebase";
-import { auth, db } from "../firebase-config";
+import firebase from "firebase"
+import { auth, userCollection } from "../firebase-config"
 
 export default {
     name: "Login",
@@ -56,12 +56,10 @@ export default {
         return {
             email: "",
             password: "",
-            userCollection: null,
         }
     },
     created() {
         this.$session.start();
-        this.userCollection = db.collection("users");
     },
     methods: {
         login: function() {
@@ -81,7 +79,7 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
                     
-                    this.checkUser(result.user.uid, result.user.displayName, "customer", null);
+                    this.checkUser(result.user.uid, result.user.displayName, "customer");
 
                     this.$router.replace({name: "Dashboard"});
                 },
@@ -97,7 +95,7 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
 
-                    this.checkUser(result.user.uid, result.user.displayName, "customer", null);
+                    this.checkUser(result.user.uid, result.user.displayName, "customer");
                     
                     this.$router.replace({name: "Dashboard"});
                 },
@@ -106,15 +104,14 @@ export default {
                 }
             )
         },
-        checkUser: function(user_id, name, type, address) {
-            this.userCollection.where('uid', "==", user_id).get().then(result => {
+        checkUser: function(user_id, name, type) {
+            userCollection.where('uid', "==", user_id).get().then(result => {
                 if (result.empty) {
-                    this.userCollection.add({
+                    userCollection.add({
                         uid: user_id,
                         name: name,
                         type: type,
-                        address: address,
-                        location: null,
+                        location: new firebase.firestore.GeoPoint(0, 0),
                         notification_token: null
                     }).then(users => {
                         this.$session.set('auid', users.id);
@@ -127,13 +124,8 @@ export default {
         }
     },
     beforeDestroy() {
-        this.userCollection = null;
         this.email = null;
         this.password = null;
     }
 }
 </script>
-
-<style lang="scss" scoped>
-
-</style>

@@ -1,34 +1,14 @@
 <template>
     <div class="container">
-        <h1>Order</h1>
-        <small>ID: {{ order_id }}</small>
+        <h1 class="text-center">Order</h1>
+        <div class="text-center"><small  v-if="order">ID: {{ order_id }}</small></div>
 
-        <div class="row" v-if="restaurant && order">
-            <div class="col-8">
-                <h3>Order Information</h3>
-                <table class="table table-stripped" >
-                    <tbody>
-                        <tr>
-                            <td>Restaurant</td>
-                            <td>{{ restaurant.name }}</td>
-                        </tr>
-                        <tr>
-                            <td>Status</td>
-                            <td>{{ orderStatus[order.status] }}</td>
-                        </tr>
-                        <tr>
-                            <td>Ordered Time</td>
-                            <td>{{ formatFBtimestamp(order.ordered_time) }}</td>
-                        </tr>
-                        <tr v-if="order.status == 3 && order.reason">
-                            <td>Reason</td>
-                            <td>{{ order.reason }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div class="row" >
+            <div class="col-8" v-if="order">
+                <!-- <h3>Order Information</h3> -->
 
-                <h3>Orders</h3>
-                <table class="table" v-if="order.menu_orders">
+                <h3>Ordered Menu</h3>
+                <table class="table">
                     <tbody>
                         <tr>
                             <td>{{ order.menu_orders.name }}</td>
@@ -45,25 +25,61 @@
                     </tbody>
                 </table>
 
-                <h3>Rider Info</h3>
-                <table  class="table">
-                    <tbody v-if="order.rider_id && Object.keys(rider).length > 0">
+                <h3>Informations</h3>
+                <table class="table">
+                    <tbody>
                         <tr>
-                            <td>name</td>
-                            <td>{{ (rider.name) ? rider.name : "" }}</td>
+                            <td>Ordered Time</td>
+                            <td>{{ formatFBtimestamp(order.ordered_time) }}</td>
                         </tr>
                         <tr>
-                            <td>Rating</td>
-                            <td>&#9733; &#9733; &#9733; &#9733; &#9733;</td>
+                            <td>Order status</td>
+                            <td>{{ orderStatus[order.status] }}</td>
                         </tr>
-                        <tr>
-                            <td>Picture</td>
-                            <td><img src="/images/Fadi-Yassmin.jpg" alt="" style="height: 50px;"></td>
+                        <tr v-if="order.reason">
+                            <td>Reason</td>
+                            <td>{{ order.reason }}</td>
+                        </tr>
+                        <tr v-if="order.restaurant_pick_time">
+                            <td>Restaurant Response Time</td>
+                            <td>{{ formatFBtimestamp(order.restaurant_pick_time) }}</td>
+                        </tr>
+                        <tr v-if="order.rider_pick_time">
+                            <td>Rider Response Time</td>
+                            <td>{{ formatFBtimestamp(order.restaurant_pick_time) }}</td>
+                        </tr>
+                        <tr v-if="order.rider_pick_up_time">
+                            <td>Rider Response Time</td>
+                            <td>{{ formatFBtimestamp(order.rider_pick_up_time) }}</td>
+                        </tr>
+                        <tr v-if="order.delivered_time">
+                            <td>Delivered Tme</td>
+                            <td>{{ formatFBtimestamp(order.delivered_time) }}</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="card bg-light mb-3 w-100" v-if="order.chats && order.rider_id && Object.keys(rider).length > 0">
+                <div v-if="order.rider_id && rider">
+                    <h3>Rider Info</h3>
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td>name</td>
+                                <td>{{ (rider.name) ? rider.name : "" }}</td>
+                            </tr>
+                            <tr>
+                                <td>Rating</td>
+                                <td>&#9733; &#9733; &#9733; &#9733; &#9733;</td>
+                            </tr>
+                            <tr>
+                                <td>Picture</td>
+                                <td><img src="/images/Fadi-Yassmin.jpg" alt="" style="height: 50px;"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card bg-light mb-3 w-100" v-if="order.chats > 0 && order.rider_id && Object.keys(rider).length > 0">
                     <div class="card-header">Chats</div>
                     <div class="card-body chat-box">
                         <div class="chat-messages">
@@ -93,84 +109,92 @@
             </div>
 
             <div class="col-4">
-                <div id="map" ref="orderMap"></div>
+                <div id="orderMap"></div>
 
-                <div class="mt-3">
+                <!-- <div class="mt-3">
                     <button type="button" class="btn btn-primary" @click="updateDriverMarker"> Update driver marker</button>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>
 </template>
 
 <script>
+    import { ORDERSTATUS } from '../orderStatus'
+    import { orderCollection, restaurantCollection, userCollection} from "../firebase-config"
+    import { GOOGLE } from '../config'
     
-    import { db } from "../firebase-config";
-    import { ORDERSTATUS } from '../orderStatus';
-    import firebase from 'firebase';
-
     export default {
         data() {
             return {
-                order_id: this.$route.params.order_id,
                 orderStatus: ORDERSTATUS,
+                order_id: this.$route.params.order_id,
                 order: null,
+                orderRef: null,
                 orderDoc: null,
                 restaurant: null,
                 rider: null,
-                message: "",
+                riderRef: null,
                 rider_marker: null,
-                orderRef: null
+                mapLoad: false
             }
         },
         created() {
-            var userCollection = db.collection("users");
-            this.orderDoc = db.collection("customer_orders").doc(this.order_id)
-            this.orderRef = this.orderDoc.onSnapshot(
-                result => {
-                    if (!result.exists) {
-                        alert("Not Found");
-                        this.$router.replace({name: "Dashboard"});
-                    }
-
-                    this.order = result.data();
-
-                    db.collection("restaurants").doc(this.order.restaurant_id).get().then(
-                        (result) => {
-                            if (!result.exists) {
+            this.orderDoc = orderCollection.doc(this.order_id)
+            this.orderRef = this.orderDoc.onSnapshot((order) => {
+                if (!order.exists) {
+                    alert("Not Found");
+                    this.$router.replace({name: "Dashboard"});
+                    return false;
+                }
+                this.order = order.data();
+                
+                if (this.restaurant == null) {
+                    restaurantCollection.doc(this.order.restaurant_id).get().then(
+                        (restaurant) => {
+                            if (!restaurant.exists) {
                                 alert("Invalid Restaurant");
                                 this.$router.replace({name: "Dashboard"});
                             }
+    
+                            this.restaurant = {id: restaurant.id, ...restaurant.data()};
+    
+                            if (this.mapLoad) {
+                                this.initMap();
+                            }
+                        } 
+                    );
+                }
 
-                            this.restaurant = {id: result.id, ...result.data()};
+                if (this.order.rider_id && this.rider == null) {
+                    this.riderRef = userCollection.doc(this.order.rider_id).onSnapshot(
+                        (rider) => {
+                            this.rider = {id: rider.id, ...rider.data()}
 
-                            userCollection.doc(this.order.user_id).get().then(
-                                (result) => {
-                                    var user = result.data();
-                                    this.initMap(
-                                        { lat: user.location.latitude, lng: user.location.longitude },
-                                        { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude }
-                                    );
-                                }
-                            );
+                            if (this.rider_marker) {
+                                this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
+                            }
                         }
                     );
-
-                    if (this.order.rider_id) {
-                        userCollection.doc(this.order.rider_id).get().then(
-                            (result) => {
-                                this.rider = {id: result.id, ...result.data()}
-                            }
-                        );
-                    }
                 }
-            );
+            });
         },
         mounted() {
-            var mapEl = document.getElementById("map");
-            if (mapEl) {
-                mapEl.setAttribute("ref", "orderMap");
+            if (!document.getElementById("googleMapScript")) {
+                var _this = this;
+                let googleMapScript = document.createElement('script');
+                googleMapScript.id = "googleMapScript";
+                googleMapScript.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE.map.key;
+                googleMapScript.addEventListener("load", function() {
+                    _this.mapLoad = true;
+                    if (_this.order != null) {
+                        console.log("1.5");
+                        _this.initMap();
+                    }
+                });
+                document.head.appendChild(googleMapScript);
             }
+            
         },
         methods: {
             validateDateNum: function(n) { 
@@ -187,25 +211,8 @@
                 return this.validateDateNum(t.getDate()) + "/" + this.validateDateNum(t.getMonth() + 1) + "/" + t.getFullYear() + " " + 
                     this.validateDateNum(t.getHours()) + ":" + this.validateDateNum(t.getMinutes()) + ":" + this.validateDateNum(t.getSeconds());
             },
-            sendMessage: function() {
-                if (!this.message) {
-                    return;
-                }
-
-                this.orderDoc.update({
-                    chats: firebase.firestore.FieldValue.arrayUnion({
-                        created_at: firebase.firestore.Timestamp.fromDate(new Date()),
-                        message: this.message,
-                        user_id: this.order.user_id
-                    })
-                });
-
-                this.message = "";
-            },
-            initMap: function(origin, destination) {
-                var directionsService = new window.google.maps.DirectionsService();
-                var directionsRenderer = new window.google.maps.DirectionsRenderer({suppressMarkers: true});
-                var map = new window.google.maps.Map(this.$refs.orderMap, {
+            initMap: function() {
+                var map = new window.google.maps.Map(document.getElementById("orderMap"), {
                     center: { lat: 15.1450545, lng: 120.5894371},
                     zoom: 10,
                     streetViewControl: false,
@@ -218,17 +225,26 @@
                     title: "You",
                     map: map,
                 });
+                var infoWindow = new window.google.maps.InfoWindow({
+                    content: this.restaurant.name, 
+                    position: {lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude}
+                });
+                infoWindow.open();
+
                 this.rider_marker = new window.google.maps.Marker({
                     title: "Let's Bee Driver",
                     icon: 'http://localhost:8080/images/driver.png',
                     map: map,
                 });
+                
+                var directionsService = new window.google.maps.DirectionsService();
+                var directionsRenderer = new window.google.maps.DirectionsRenderer({suppressMarkers: true});
 
                 directionsRenderer.setMap(map);
                 directionsService.route(
                     {
-                        origin: origin,
-                        destination: destination,
+                        origin: { lat: this.order.customer_location.latitude, lng: this.order.customer_location.longitude },
+                        destination: { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude },
                         travelMode: window.google.maps.TravelMode.DRIVING,
                     },
                     (response, status) => {
@@ -236,63 +252,16 @@
                             directionsRenderer.setDirections(response);
                             var leg = response.routes[ 0 ].legs[ 0 ];
                             userMarker.setPosition(leg.start_location);
-                            this.rider_marker.setPosition(leg.end_location);
-
+                            if (this.rider) {
+                                this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
+                            }
                         } else {
-                            window.alert("Directions request failed due to " + status);
+                            alert("Directions request failed due to " + status);
                         }
                     }
                 );
+                
             },
-            updateDriverMarker: function() { // sample moving rider
-                this.rider_marker.setPosition(new window.google.maps.LatLng( 15.163311792454815, 120.55535166729865 ));
-            }
         },
-        beforeDestroy() {
-            this.order = null;
-            this.orderDoc = null;
-            this.restaurant = null;
-            this.rider = null;
-            this.message = "";
-            this.rider_marker = null;
-            this.orderRef();
-        }
-        
     }
-
-
 </script>
-
-<style lang="scss" scoped>
-    .chat-box {
-        position: relative;
-        height: 600px;
-    }
-    .chat-box .chat-messages {
-        height: 550px;
-    }
-    .chat-box .chat-message {
-        background-color: rgba(0,0,0,.03);
-        margin-bottom: 0.5em;
-        padding: 0.5em;
-    }
-    .chat-box .chat-message .chat-user-name {
-        font-size: 0.75em;
-    }
-    .chat-box .chat-message .chat-user-date {
-        font-size: 0.5em;
-    }
-    .chat-box .chat-input {
-        height: 50px;
-        width: 100%;
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        background-color: #ffffff;
-        padding: 0.35em;
-    }
-    #map {
-        height: 600px;
-        background-color: grey;
-    }
-</style>

@@ -20,11 +20,6 @@
                 <input type="text" id="inputName" class="form-control" placeholder="Name" required v-model="name">
             </div>
 
-            <div class="form-group">
-                <label for="inputAddress" class="sr-only">Address</label>
-                <input type="text" id="inputAddress" class="form-control" placeholder="Address" required v-model="address">
-            </div>
-
             <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
 
             <p class="mt-3">
@@ -37,8 +32,8 @@
 </template>
 
 <script>
-
-    import { auth, db } from '../firebase-config';
+    import firebase from 'firebase'
+    import { auth, userCollection } from '../firebase-config'
 
     export default {
         name: "Register",
@@ -47,27 +42,29 @@
                 name: "",
                 email: "",
                 password: "",
-                address: ""
             }
         },
         register: function() {
             auth.createUserWithEmailAndPassword(this.email, this.password).then(
                 (result) => {
-                    console.log(result);
-                    db.collection("users")
-                        .add({
-                            uid: result.user.uid,
-                            name: this.name,
-                            type: "customer",
-                            address: this.address,
-                            location: null,
-                            notification_token: null
-                        }).then(() => {
-                            alert("Successfully Registered");
-                            this.$router.replace({name: "Login"});
-                        }).catch((error) => {
-                            alert("Something went wrong, please contact us. - " + error);
-                        });
+                    userCollection.where('uid', "==", result.user.uid).get().then(
+                        (result) => {
+                            if (result.empty) {
+                                userCollection.add({
+                                    uid: result.user.uid,
+                                    name: this.name,
+                                    type: "customer",
+                                    location: new firebase.firestore.GeoPoint(0, 0),
+                                    notification_token: null
+                                }).then(() => {
+                                    alert("Successfully Registered");
+                                    this.$router.replace({name: "Login"});
+                                }).catch((error) => {
+                                    alert("Something went wrong, please contact us. - " + error);
+                                });
+                            }
+                        }
+                    );
                 },
                 err => {
                     alert(err);
@@ -78,31 +75,14 @@
             this.name =  "";
             this.email =  "";
             this.password =  "";
-            this.address =  "";
         }
     }
 </script>
 
 <style lang="scss" scoped>
-html,
-body {
-  height: 100%;
-}
-
-body {
-  display: -ms-flexbox;
-  display: -webkit-box;
-  display: flex;
-  -ms-flex-align: center;
-  -ms-flex-pack: center;
-  -webkit-box-align: center;
-  align-items: center;
-  -webkit-box-pack: center;
-  justify-content: center;
-  padding-top: 40px;
-  padding-bottom: 40px;
-  background-color: #f5f5f5;
-}
-
-
+    html, body { height: 100%; }
+    body {
+        display: -ms-flexbox;display: -webkit-box; display: flex; -ms-flex-align: center; -ms-flex-pack: center;
+        -webkit-box-align: center; align-items: center; -webkit-box-pack: center; justify-content: center; padding-top: 40px; padding-bottom: 40px; background-color: #f5f5f5;
+    }
 </style>

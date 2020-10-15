@@ -17,8 +17,7 @@
 </template>
 
 <script>
-
-    import { db } from "../firebase-config";
+    import { restaurantCollection } from "../firebase-config";
 
     export default {
         data() {
@@ -27,7 +26,7 @@
             }
         },
         created() {
-            db.collection("restaurants").get().then(
+            restaurantCollection.get().then(
                 (result) => {
                     this.restaurants = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
@@ -40,7 +39,3 @@
         }
     }
 </script>
-
-<style lang="scss" scoped>
-
-</style>
