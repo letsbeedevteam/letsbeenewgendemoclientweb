@@ -27,13 +27,13 @@
 
 <script>
     import { orderCollection } from "../firebase-config";
-    import { ORDERSTATUS } from '../orderStatus';
+    import { ORDER_STATUS } from '../constant';
 
     export default {
         data() {
             return {
                 orders: [],
-                orderStatus: ORDERSTATUS,
+                orderStatus: ORDER_STATUS,
                 orderRef: null,
             }
         },

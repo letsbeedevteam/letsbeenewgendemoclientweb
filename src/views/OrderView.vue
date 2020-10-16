@@ -25,6 +25,20 @@
                     </tbody>
                 </table>
 
+                <h3>Payment</h3>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>Payment Method</td>
+                            <td>{{ payments[order.payment.method] }}</td>
+                        </tr>
+                        <tr>
+                            <td>Status</td>
+                            <td>{{ order.payment.status }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
                 <h3>Informations</h3>
                 <table class="table">
                     <tbody>
@@ -34,7 +48,7 @@
                         </tr>
                         <tr>
                             <td>Order status</td>
-                            <td>{{ orderStatus[order.status] }}</td>
+                            <td>{{ statuss[order.status] }}</td>
                         </tr>
                         <tr v-if="order.reason">
                             <td>Reason</td>
@@ -120,14 +134,15 @@
 </template>
 
 <script>
-    import { ORDERSTATUS } from '../orderStatus'
+    import { ORDER_STATUS, ORDER_PAYMENT } from '../constant'
     import { orderCollection, restaurantCollection, userCollection} from "../firebase-config"
     import { GOOGLE } from '../config'
     
     export default {
         data() {
             return {
-                orderStatus: ORDERSTATUS,
+                statuss: ORDER_STATUS,
+                payments: ORDER_PAYMENT,
                 order_id: this.$route.params.order_id,
                 order: null,
                 orderRef: null,
