@@ -44,32 +44,34 @@
                 password: "",
             }
         },
-        register: function() {
-            auth.createUserWithEmailAndPassword(this.email, this.password).then(
-                (result) => {
-                    userCollection.where('uid', "==", result.user.uid).get().then(
-                        (result) => {
-                            if (result.empty) {
-                                userCollection.add({
-                                    uid: result.user.uid,
-                                    name: this.name,
-                                    type: "customer",
-                                    location: new firebase.firestore.GeoPoint(0, 0),
-                                    notification_token: null
-                                }).then(() => {
-                                    alert("Successfully Registered");
-                                    this.$router.replace({name: "Login"});
-                                }).catch((error) => {
-                                    alert("Something went wrong, please contact us. - " + error);
-                                });
+        methods: {
+            register: function() {
+                auth.createUserWithEmailAndPassword(this.email, this.password).then(
+                    (auth) => {
+                        userCollection.where('uid', "==", auth.user.uid).get().then(
+                            (result) => {
+                                if (result.empty) {
+                                    userCollection.add({
+                                        uid: auth.user.uid,
+                                        name: this.name,
+                                        type: "customer",
+                                        location: new firebase.firestore.GeoPoint(0, 0),
+                                        notification_token: null
+                                    }).then(() => {
+                                        alert("Successfully Registered");
+                                        this.$router.replace({name: "Dashboard"});
+                                    }).catch((error) => {
+                                        alert("Something went wrong, please contact us. - " + error);
+                                    });
+                                }
                             }
-                        }
-                    );
-                },
-                err => {
-                    alert(err);
-                }
-            );
+                        );
+                    },
+                    err => {
+                        alert(err);
+                    }
+                );
+            },
         },
         beforeDestroy() {
             this.name =  "";

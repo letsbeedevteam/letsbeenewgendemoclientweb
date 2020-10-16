@@ -89,20 +89,20 @@
         },
         created() {
 
-            auth.onAuthStateChanged((user) => {
-                this.loggedIn = !!user;
+            auth.onAuthStateChanged((authUser) => {
+                this.loggedIn = !!authUser;
 
-                if (!user) {
+                if (!authUser) {
                     return false;
                 }
                 let userCollection = db.collection("users");
-                this.auth_name = user.displayName;
             
                 this.$session.start();
-                userCollection.where('uid', "==", user.uid).get().then(result => {
-                    let users_data = result.docs.map(user => { return { id: user.id } });
+                userCollection.where('uid', "==", authUser.uid).get().then(result => {
+                    let users_data = result.docs.map(user => { return { id: user.id, ...user.data() } });
                     
                     let user_id = users_data[0].id;
+                    this.auth_name = users_data[0].name;
 
                     if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
                         this.$session.set('auid', user_id);
