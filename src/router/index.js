@@ -14,6 +14,9 @@ import DeleteOrder from '../views/DeleteOrder.vue'
 import PaypalCreatePayment from '../views/PaypalCreatePayment.vue'
 import PaypalReturnPayment from '../views/PaypalReturnPayment.vue'
 import PaypalCancelPayment from '../views/PaypalCancelPayment.vue'
+import GCashCreatePayment from '../views/GCashCreatePayment.vue'
+import GCashSuccessPayment from '../views/GCashSuccessPayment.vue'
+import GCashFailedPayment from '../views/GCashFailedPayment.vue'
 
 import { auth } from '../firebase-config'
 
@@ -71,7 +74,7 @@ const routes = [
   },
   {
     path: '/orders/:order_id/delete',
-    name: 'OrderView',
+    name: 'OrderDelete',
     component: DeleteOrder,
     props: true,
   },
@@ -103,8 +106,23 @@ const routes = [
   },
   {
     path: "/payment/paypal/cancel",
-    name: "PaypalReturnPayment",
+    name: "PaypalCancelPayment",
     component: PaypalCancelPayment
+  },
+  {
+    path: "/payment/:order_id/gcash",
+    name: "GCashCreatePayment",
+    component: GCashCreatePayment,
+  },
+  {
+    path: "/payment/gcash/success",
+    name: "GCashSuccessPayment",
+    component: GCashSuccessPayment,
+  },
+  {
+    path: "/payment/gcash/failed",
+    name: "GCashFailedPayment",
+    component: GCashFailedPayment,
   },
 ]
 

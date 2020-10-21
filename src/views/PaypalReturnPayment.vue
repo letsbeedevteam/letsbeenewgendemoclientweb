@@ -6,7 +6,7 @@
         </div>
         <div v-else>
             <h1>Payment has been accepted</h1>
-            <button type="button" class="btn btn-primary" @click="closeWindow"> Close</button>
+            <small>You can now close this window/page</small>
         </div>
     </div>
 </template>
@@ -29,7 +29,6 @@
         },
         created() {
 
-            
             var orderRef = orderCollection.doc(this.order_id);
             orderRef.get().then((result) => {
                 console.log("OrderResult", result);
@@ -180,56 +179,13 @@
                 });
             },
 
-            closeWindow: function() {
-                window.close();
-            },
-            
             catchError: function(err) {
                 console.log(err);
                 if (err.response) {
                     console.log(err.response.data)
                 }
             }
-            /* checkPayment: function(result) {
-                return axios.get(
-                    "https://api.sandbox.paypal.com/v1/payments/payment/" + this.payment_id, 
-                    {
-                        headers: {
-                            'Content-Type':'application/json',
-                            'Authorization': "Bearer " + this.token,
-                        },
-                    }
-                )
-            },
-            validatePayment: function(result) {
-                return axios.post(
-                    "https://api.sandbox.paypal.com/v1/payments/payment/" + this.payment_id + "/execute", 
-                    {
-                        payer_id: this.payer_id
-                    },
-                    {
-                        headers: {
-                            'Content-Type':'application/json',
-                            'Authorization': "Bearer " + this.token,
-                        },
-                    }
-                )
-            },
-            authorizePayment: function(result) {
-                return axios.post(
-                    "https://api.sandbox.paypal.com/v1/payments/orders/O-0NR488530V5211123/authorize",
-                    // "https://api.sandbox.paypal.com/v1/payments/payment/" + this.payment_id + "/execute", 
-                    {
-                        payer_id: this.payer_id
-                    },
-                    {
-                        headers: {
-                            'Content-Type':'application/json',
-                            'Authorization': "Bearer " + this.token,
-                        },
-                    }
-                )
-            } */
+            
         }
     }
 </script>

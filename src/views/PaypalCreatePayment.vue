@@ -6,7 +6,7 @@
 
 <script>
     import { orderCollection } from '../firebase-config'
-    import { PAYPAL } from '../config'
+    import { PAYPAL, NETWORK_URL } from '../config'
     import axios from 'axios'
     import qs from 'querystring'
 
@@ -19,47 +19,45 @@
         created() {
             
             var orderRef = orderCollection.doc(this.order_id);
-            orderRef.get().then(
-                (result) => {
-                    if (!result.exists) {
-                        alert("This payment is invalid");
-                        window.close();
-                    }
-                    
-                    let order = { id: result.id, ...result.data()};
+            orderRef.get().then((result) => {
+                if (!result.exists) {
+                    alert("This payment is invalid");
+                    window.close();
+                }
+                
+                let order = { id: result.id, ...result.data()};
 
-                    if (order.payment.method != "paypal") { 
-                        alert("This Payment is not paypal");
-                        window.close();
-                        return false;
-                    }
-                    if (order.payment.status != "pending") {
-                        alert("This payment is already processed");
-                        window.close();
-                        return false;
-                    }
+                if (order.payment.method != "paypal") { 
+                    alert("This Payment is not paypal");
+                    window.close();
+                    return false;
+                }
+                if (order.payment.status != "pending") {
+                    alert("This payment is already processed");
+                    window.close();
+                    return false;
+                }
 
-                    this.getPaypalToken().then((token) => {
-                        console.log("GetPaypalToken", token);
+                this.getPaypalToken().then((token) => {
+                    console.log("GetPaypalToken", token);
 
-                        var total_price = order.menu_orders.price + order.delivery_fee;
-                        this.createOrder(token.data.access_token, order.id, total_price).then(order_result => {
-                            console.log("CreatePaypalOrder", order_result);
+                    var total_price = order.menu_orders.price + order.delivery_fee;
+                    this.createOrder(token.data.access_token, order.id, total_price).then(order_result => {
+                        console.log("CreatePaypalOrder", order_result);
 
-                            this.updateOrderPayment(orderRef, order_result.data.id).then(update_result => {
-                                console.log("UpdateOrderPaypalID", update_result);
+                        this.updateOrderPayment(orderRef, order_result.data.id).then(update_result => {
+                            console.log("UpdateOrderPaypalID", update_result);
 
-                                alert("Successfully create a paypal payment");
-                                window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order_result.data.id;
-
-                            }).catch(this.catchError);
+                            alert("Successfully create a paypal payment");
+                            window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order_result.data.id;
 
                         }).catch(this.catchError);
 
                     }).catch(this.catchError);
 
-                }
-            )
+                }).catch(this.catchError);
+
+            });
         },
         methods: {
             getPaypalToken: function() {
@@ -95,8 +93,8 @@
                         ],
                         "application_context": {
                             "brand_name": "Let's Bee",
-                            "return_url": "http://localhost:8080/payment/paypal/return?order_id=" + order_id,
-                            "cancel_url": "http://localhost:8080/payment/paypal/cancel?order_id=" + order_id
+                            "return_url": NETWORK_URL + "/payment/paypal/return?order_id=" + order_id,
+                            "cancel_url": NETWORK_URL + "/payment/paypal/cancel?order_id=" + order_id
                         }
                     },
                     {
@@ -126,20 +124,6 @@
                     }
                 });
             }
-            /* checkOrder: function(token, order) {
-                
-                return axios.get(
-                    "https://api.sandbox.paypal.com/v2/checkout/orders/" + order.payment.details.orderID,
-                    {
-                        headers: {
-                            'Content-Type':'application/json',
-                            'Authorization': "Bearer " + token.data.access_token,
-                        },
-                    }
-                );
-
-            }, */
-
         }
     }
 </script>

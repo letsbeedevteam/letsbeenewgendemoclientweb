@@ -166,10 +166,10 @@
                     this.$router.replace({name: "Dashboard"});
                     return false;
                 }
-            console.log(order.id);
+                // console.log(order.id);
                 this.order = order.data();
-                console.log(this.order);
-                if (this.restaurant == null) {
+                // console.log(this.order);
+                if (this.restaurant == null && this.order.restaurant_id) {
                     restaurantCollection.doc(this.order.restaurant_id).get().then(
                         (restaurant) => {
                             if (!restaurant.exists) {

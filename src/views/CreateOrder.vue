@@ -6,11 +6,7 @@
 
 <script>
     import firebase from 'firebase'
-    // import qs from 'querystring'
-    // import axios from 'axios'
-
     import { userCollection, orderCollection } from '../firebase-config'
-    // import { PAYPAL } from '../config'
 
     export default {
         created() {
@@ -26,7 +22,7 @@
                     this.auth = {id: auth.id, ...auth.data()};
 
                     orderCollection.add({
-                        restaurant_id: "",
+                        restaurant_id: "jollibee123",
                         user_id: this.auth.id,
                         menu_orders: {
                             name: "Chicken joy",
@@ -67,52 +63,6 @@
             );
 
         },
-        methods: {
-            /* getPaypalToken: function() {
-                return axios.post(
-                    "https://api.sandbox.paypal.com/v1/oauth2/token", 
-                    qs.stringify({"grant_type":"client_credentials"}),
-                    {
-                        headers: {
-                            'Accept': 'application/json', 
-                            'Accept-Language': 'en_US',
-                            'Content-Type':'application/x-www-form-urlencoded',
-                            'Access-Control-Allow-Origin': '*', 
-                        },
-                        auth: {
-                            username: PAYPAL.clientId,
-                            password: PAYPAL.secretId,
-                        }
-                    }
-                );
-            },
-            createPaypelOrder: function(token) {
-                return axios.post(
-                    "https://api.sandbox.paypal.com/v2/checkout/orders", 
-                    {
-                        intent: "CAPTURE",
-                        purchase_units: [
-                            {
-                                amount: {
-                                    currency_code: "PHP",
-                                    value: "75.00"
-                                }
-                            }
-                        ],
-                        application_context: {
-                            brand_name: "Let's Bee",
-                            return_url:'http://localhost:8080/payment/paypal/return',
-                            cancel_url:'http://localhost:8080/payment/paypal/cancel'
-                        }
-                    },
-                    {
-                        headers: {
-                            'Content-Type':'application/json',
-                            'Authorization': "Bearer " + token.data.access_token,
-                        },
-                    }
-                );
-            } */
-        }
+
     }
 </script>
