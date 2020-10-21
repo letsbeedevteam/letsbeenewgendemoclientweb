@@ -5,7 +5,6 @@
 
         <div class="row" >
             <div class="col-8" v-if="order">
-                <!-- <h3>Order Information</h3> -->
 
                 <h3>Ordered Menu</h3>
                 <table class="table">
@@ -93,7 +92,7 @@
                     </table>
                 </div>
 
-                <div class="card bg-light mb-3 w-100" v-if="order.chats > 0 && order.rider_id && Object.keys(rider).length > 0">
+                <div class="card bg-light mb-3 w-100" v-if="order.rider_id && rider && Object.keys(rider).length > 0">
                     <div class="card-header">Chats</div>
                     <div class="card-body chat-box">
                         <div class="chat-messages">
@@ -123,7 +122,7 @@
             </div>
 
             <div class="col-4">
-                <div id="orderMap"></div>
+                <div id="orderMap" ref="orderMap"></div>
 
                 <!-- <div class="mt-3">
                     <button type="button" class="btn btn-primary" @click="updateDriverMarker"> Update driver marker</button>
@@ -134,8 +133,11 @@
 </template>
 
 <script>
+    import firebase from 'firebase'
+    import GoogleMapsApiLoader from 'google-maps-api-loader'
+
     import { ORDER_STATUS, ORDER_PAYMENT } from '../constant'
-    import { orderCollection, restaurantCollection, userCollection} from "../firebase-config"
+    import { orderCollection, restaurantCollection, riderCollection } from "../firebase-config"
     import { GOOGLE } from '../config'
     
     export default {
@@ -151,7 +153,9 @@
                 rider: null,
                 riderRef: null,
                 rider_marker: null,
-                mapLoad: false
+                google: null,
+                map: null,
+                message: ""
             }
         },
         created() {
@@ -162,8 +166,9 @@
                     this.$router.replace({name: "Dashboard"});
                     return false;
                 }
+            console.log(order.id);
                 this.order = order.data();
-                
+                console.log(this.order);
                 if (this.restaurant == null) {
                     restaurantCollection.doc(this.order.restaurant_id).get().then(
                         (restaurant) => {
@@ -173,44 +178,43 @@
                             }
     
                             this.restaurant = {id: restaurant.id, ...restaurant.data()};
-    
-                            if (this.mapLoad) {
-                                this.initMap();
+
+                            if (this.isLoadMap) {
+                                this.initializeMap();
                             }
                         } 
                     );
                 }
 
                 if (this.order.rider_id && this.rider == null) {
-                    this.riderRef = userCollection.doc(this.order.rider_id).onSnapshot(
-                        (rider) => {
-                            this.rider = {id: rider.id, ...rider.data()}
+                    this.riderRef = riderCollection.doc(this.order.rider_id).onSnapshot((rider) => {
+                        this.rider = {id: rider.id, ...rider.data()}
 
-                            if (this.rider_marker) {
-                                this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
+                        if (this.rider_marker) {
+                            if (this.rider_marker.getMap() == null) {
+                                this.rider_marker.setMap(this.map);
                             }
+                            this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
                         }
-                    );
+                    });
                 }
             });
         },
-        mounted() {
-            if (!document.getElementById("googleMapScript")) {
-                var _this = this;
-                let googleMapScript = document.createElement('script');
-                googleMapScript.id = "googleMapScript";
-                googleMapScript.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE.map.key;
-                googleMapScript.addEventListener("load", function() {
-                    _this.mapLoad = true;
-                    if (_this.order != null) {
-                        console.log("1.5");
-                        _this.initMap();
-                    }
-                });
-                document.head.appendChild(googleMapScript);
+        
+        async mounted() {
+            this.google =  await GoogleMapsApiLoader({
+                apiKey: GOOGLE.map.key
+            }).catch(err => {
+                console.log(err);
+                alert("Something went wrong on Google Map. Please try refreshing the page");
+            });
+
+            this.isLoadMap = true;
+            if (this.restaurant != null) {
+                this.initializeMap();
             }
-            
         },
+        
         methods: {
             validateDateNum: function(n) { 
                 return (n < 10 ? '0' : '') + n; 
@@ -226,41 +230,40 @@
                 return this.validateDateNum(t.getDate()) + "/" + this.validateDateNum(t.getMonth() + 1) + "/" + t.getFullYear() + " " + 
                     this.validateDateNum(t.getHours()) + ":" + this.validateDateNum(t.getMinutes()) + ":" + this.validateDateNum(t.getSeconds());
             },
-            initMap: function() {
-                var map = new window.google.maps.Map(document.getElementById("orderMap"), {
+
+            initializeMap: function() {
+                this.map = new this.google.maps.Map(this.$refs.orderMap, {
                     center: { lat: 15.1450545, lng: 120.5894371},
                     zoom: 10,
                     streetViewControl: false,
-                    mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+                    mapTypeId: this.google.maps.MapTypeId.ROADMAP,
                     disableDefaultUI: true
                 });
 
-                var userMarker = new window.google.maps.Marker({
+                var userMarker = new this.google.maps.Marker({
                     label: "You",
                     title: "You",
-                    map: map,
+                    map: this.map,
                 });
-                var infoWindow = new window.google.maps.InfoWindow({
+                new this.google.maps.InfoWindow({
                     content: this.restaurant.name, 
                     position: {lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude}
-                });
-                infoWindow.open();
+                }).open();
 
-                this.rider_marker = new window.google.maps.Marker({
+                this.rider_marker = new this.google.maps.Marker({
                     title: "Let's Bee Driver",
                     icon: 'http://localhost:8080/images/driver.png',
-                    map: map,
+                    map: null
                 });
                 
-                var directionsService = new window.google.maps.DirectionsService();
-                var directionsRenderer = new window.google.maps.DirectionsRenderer({suppressMarkers: true});
-
-                directionsRenderer.setMap(map);
-                directionsService.route(
+                var directionsRenderer = new this.google.maps.DirectionsRenderer({suppressMarkers: true});
+                directionsRenderer.setMap(this.map);
+                // console.log(this.order);
+                new this.google.maps.DirectionsService().route(
                     {
                         origin: { lat: this.order.customer_location.latitude, lng: this.order.customer_location.longitude },
                         destination: { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude },
-                        travelMode: window.google.maps.TravelMode.DRIVING,
+                        travelMode: this.google.maps.TravelMode.DRIVING,
                     },
                     (response, status) => {
                         if (status === "OK") {
@@ -268,6 +271,7 @@
                             var leg = response.routes[ 0 ].legs[ 0 ];
                             userMarker.setPosition(leg.start_location);
                             if (this.rider) {
+                                this.rider_marker.setMap(this.map);
                                 this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
                             }
                         } else {
@@ -275,8 +279,24 @@
                         }
                     }
                 );
-                
             },
+            sendMessage: function() {
+                
+                if (!this.message) {
+                    alert("Please fill up the message field before sending a message");
+                    return false;
+                }
+                this.orderDoc.update({
+                    chats: firebase.firestore.FieldValue.arrayUnion({
+                        created_at: firebase.firestore.Timestamp.fromDate(new Date()),
+                        message: this.message,
+                        user_id: this.order.user_id
+                    })
+                }).then((result) => {
+                    console.log(result);
+                    this.message = "";
+                })
+            }
         },
     }
 </script>

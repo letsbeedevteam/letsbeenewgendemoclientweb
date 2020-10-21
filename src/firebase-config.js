@@ -7,7 +7,10 @@ firebase.initializeApp(FIREBASE.firestore);
 
 const db = firebase.firestore();
 const auth = firebase.auth();
-const messaging = firebase.messaging();
+var messaging = null;
+if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+}
 
 const userCollection = db.collection("users");
 const riderCollection = db.collection("riders");

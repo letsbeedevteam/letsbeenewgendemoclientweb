@@ -79,9 +79,15 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
                     
-                    this.checkUser(result.user.uid, result.user.displayName, "customer");
-
-                    this.$router.replace({name: "Dashboard"});
+                    this.checkUser(result.user.uid).then((user_result) => {
+                        if (user_result.empty) {
+                            this.createUser(result.user.uid, result.user.displayName, "customer").then(users => {
+                                alert("Successfully logged in");
+                                this.$session.set('auid', users.id);
+                                this.$router.replace({name: "Dashboard"});
+                            })
+                        }
+                    });
                 },
                 (err) => {
                     alert(err);
@@ -95,32 +101,33 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
 
-                    this.checkUser(result.user.uid, result.user.displayName, "customer");
+                    this.checkUser(result.user.uid).then((user_result) => {
+                        if (user_result.empty) {
+                            this.createUser(result.user.uid, result.user.displayName, "customer").then(users => {
+                                alert("Successfully logged in");
+                                this.$session.set('auid', users.id);
+                                this.$router.replace({name: "Dashboard"});
+                            })
+                        }
+                    });
                     
-                    this.$router.replace({name: "Dashboard"});
                 },
                 (err) => {
                     alert(err);
                 }
             )
         },
-        checkUser: function(user_id, name, type) {
-            userCollection.where('uid', "==", user_id).get().then(result => {
-                if (result.empty) {
-                    userCollection.add({
-                        uid: user_id,
-                        name: name,
-                        type: type,
-                        location: new firebase.firestore.GeoPoint(0, 0),
-                        notification_token: null
-                    }).then(users => {
-                        this.$session.set('auid', users.id);
-                    })
-                } else {
-                    let users_data = result.docs.map(user => { return { id: user.id, ...user.data() } });
-                    this.$session.set('auid', users_data[0].id);
-                }
-            });
+        checkUser: function(user_id) {
+            return userCollection.where('uid', "==", user_id).get();
+        },
+        createUser: function(user_id, name, type) {
+            return userCollection.add({
+                uid: user_id,
+                name: name,
+                type: type,
+                location: new firebase.firestore.GeoPoint(0, 0),
+                notification_token: null
+            })
         }
     },
     beforeDestroy() {

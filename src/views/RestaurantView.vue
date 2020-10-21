@@ -20,7 +20,7 @@
                             <tr v-for="menu in restaurant.menus" :key="menu.name">
                                 <td>{{ menu.name }} </td>
                                 <td><span>&#8369;</span> {{ menu.price }} </td>
-                                <td><button type="button" class="btn btn-primary" @click="selectOrder(menu.name, menu.price)">Select</button></td>
+                                <td><button type="button" v-bind:class="[select.class, select.disabled ? 'disabled' : '']" @click="selectOrder(menu.name, menu.price)">Select</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -60,9 +60,10 @@
 
 <script>
     import firebase from 'firebase'
-    import { orderCollection, restaurantCollection, userCollection } from '../firebase-config'
-    import { FIREBASE, PAYPAL, GOOGLE } from '../config'
     import axios from 'axios'
+    import GoogleMapsApiLoader from 'google-maps-api-loader'
+    import { FIREBASE, PAYPAL, GOOGLE } from '../config'
+    import { orderCollection, restaurantCollection, userCollection } from '../firebase-config'
 
     export default {
         data() {
@@ -76,8 +77,15 @@
                     delivery_fee: 0,
                     total_price: 0
                 },
+                google: null,
+                map: null,
+                select: {
+                    class: "btn btn-primary",
+                    disabled: true
+                }
             }
         },
+
         created() {
             restaurantCollection.doc(this.restaurant_id).get().then(
                 (result) => {
@@ -101,26 +109,33 @@
                 }
             );
         },
-        mounted() {
-            if (!document.getElementById("googleMapScript")) {
-                let googleMapScript = document.createElement('script');
-                googleMapScript.id = "googleMapScript";
-                googleMapScript.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE.map.key;
-                document.head.appendChild(googleMapScript);
-            }
+
+        async mounted() {
 
             if (!document.getElementById("paypalScript")) {
                 let script = document.createElement('script');
                 script.src = 'https://www.paypal.com/sdk/js?client-id=' + PAYPAL.clientId + '&currency=PHP';
                 script.id = "paypalScript";
-                script.addEventListener("load", this.setLoaded)
+                script.addEventListener("load", this.initializePaypal)
                 document.head.appendChild(script);
             } else {
-                document.getElementById("paypalScript").addEventListener("load", this.setLoaded);
+                document.getElementById("paypalScript").addEventListener("load", this.initializePaypal);
             }
+
+            this.google =  await GoogleMapsApiLoader({
+                apiKey: GOOGLE.map.key
+            }).catch(err => {
+                console.log(err);
+                if (err.response) {
+                    console.log(err.response);
+                }
+            });
+
+            this.select.disabled = false;
         },
+
         methods: {
-            setLoaded: function() {
+            initializePaypal: function() {
                 console.log("paypal Loaded");
                 var _this = this;
                 window.paypal.Buttons({
@@ -155,18 +170,19 @@
             },
             selectOrder: function(menu_name, menu_price) {
                 
-                if (this.auth.location == null) {
+                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
                     alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
                     return false;
                 }
 
-                var matrix = new window.google.maps.DistanceMatrixService();
                 var _this = this;
+                var matrix = new this.google.maps.DistanceMatrixService();
+
                 matrix.getDistanceMatrix(
                     {
-                        origins: [new window.google.maps.LatLng(this.auth.location.latitude, this.auth.location.longitude)],
-                        destinations: [new window.google.maps.LatLng(this.restaurant.location.latitude , this.restaurant.location.longitude)],
-                        travelMode: window.google.maps.TravelMode.DRIVING,
+                        origins: [new this.google.maps.LatLng(this.auth.location.latitude, this.auth.location.longitude)],
+                        destinations: [new this.google.maps.LatLng(this.restaurant.location.latitude , this.restaurant.location.longitude)],
+                        travelMode: this.google.maps.TravelMode.DRIVING,
                     }, 
                     function(response, status) {
                         
@@ -188,7 +204,7 @@
                 );
             },
             orderByDelivery: function() {
-                if (this.auth.location == null) {
+                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
                     alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
                     return false;
                 }
@@ -226,10 +242,16 @@
                     payment: {
                         method: payment_method,
                         status: payment_status,
-                        details: payment_details
+                        details: payment_details /* -> {
+                                paymentID: ""
+                                orderID: data.orderID,
+                                payerId: data.payerID,
+                                facilitatorAccessToken: data.facilitatorAccessToken,
+                                status: details.status} */
                     }
                 }).then((result) => {
                     if (!result.id) {
+
                         alert("Something went wrong. (Placing order). Please try again");
                         return false;
                     }
@@ -267,6 +289,8 @@
             this.restaurant = null;
             this.auth = null;
             this.order = { name: "------", price: 0, delivery_fee: 0, total_price: 0 };
+            this.google = null;
+            this.map = null;
         }
     }
 </script>

@@ -100,6 +100,7 @@
                 this.$session.start();
                 userCollection.where('uid', "==", authUser.uid).get().then(result => {
                     let users_data = result.docs.map(user => { return { id: user.id, ...user.data() } });
+                    // console.log(users_data);
                     
                     let user_id = users_data[0].id;
                     this.auth_name = users_data[0].name;
@@ -108,12 +109,16 @@
                         this.$session.set('auid', user_id);
                     }
 
+                    if (messaging == null) {
+                        return false;
+                    }
+                    
                     messaging.getToken().then((currentToken) => {
                         if (!currentToken) {
                             alert("No Instance ID token available. ")
                             return false;
                         }
-
+                        // console.log(currentToken);
                         this.notification_token = currentToken;
 
                         if (currentToken !== users_data[0].notification_token) {

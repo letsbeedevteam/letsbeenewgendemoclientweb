@@ -9,6 +9,11 @@ import RestaurantView from '../views/RestaurantView.vue'
 import Order from '../views/Order.vue'
 import OrderView from '../views/OrderView.vue'
 import SetAddress from '../views/SetAddress.vue'
+import CreateOrder from '../views/CreateOrder.vue'
+import DeleteOrder from '../views/DeleteOrder.vue'
+import PaypalCreatePayment from '../views/PaypalCreatePayment.vue'
+import PaypalReturnPayment from '../views/PaypalReturnPayment.vue'
+import PaypalCancelPayment from '../views/PaypalCancelPayment.vue'
 
 import { auth } from '../firebase-config'
 
@@ -65,6 +70,12 @@ const routes = [
     }
   },
   {
+    path: '/orders/:order_id/delete',
+    name: 'OrderView',
+    component: DeleteOrder,
+    props: true,
+  },
+  {
     path: '/your-delivery-location',
     name: 'SetAddress',
     component: SetAddress,
@@ -72,7 +83,39 @@ const routes = [
       requiresAuth: true
     }
   },
-
+  {
+    path: "/create-order",
+    name: "CreateOrder",
+    component: CreateOrder,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: "/payment/:order_id/paypal",
+    name: "PaypalCreatePayment",
+    component: PaypalCreatePayment,
+  },
+  /* {
+    path: "/payment/:order_id/paypal/success",
+    name: "PaypalCreatePayment",
+    component: PaypalCreatePayment,
+  }, */
+  /* {
+    path: "/payment/:order_id/paypal/create",
+    name: "PaypalCreatePayment",
+    component: PaypalCreatePayment,
+  }, */
+  {
+    path: "/payment/paypal/return",
+    name: "PaypalReturnPayment",
+    component: PaypalReturnPayment
+  },
+  {
+    path: "/payment/paypal/cancel",
+    name: "PaypalReturnPayment",
+    component: PaypalCancelPayment
+  },
 ]
 
 const router = new VueRouter({

@@ -3,7 +3,7 @@
 
         <h1>Update your Delivery Address</h1>
 
-        <div id="customerAddressMap"></div>
+        <div id="customerAddressMap" ref="customerAddressMap"></div>
 
         <div class="text-right mt-3">
             <button type="button" v-bind:class="[btnClass, saveLocation ? '' : 'disabled']" @click="updateLocation"> Save</button>
@@ -12,9 +12,9 @@
 </template>
 
 <script>
-
-    import { userCollection } from '../firebase-config'
     import firebase from 'firebase'
+    import GoogleMapsApiLoader from 'google-maps-api-loader'
+    import { userCollection } from '../firebase-config'
     import { GOOGLE } from '../config'
 
     export default {
@@ -24,7 +24,9 @@
                 authRef: null,
                 btnClass: 'btn btn-primary',
                 saveLocation: false,
-                position: {lat: 15.1450545, lng: 120.5894371}
+                position: {lat: 15.1450545, lng: 120.5894371},
+                google: null,
+                map: null
             }
         },
         created() {
@@ -40,18 +42,45 @@
                 }
             );
         },
-        mounted() {
-            if (!document.getElementById("googleMapScript")) {
-                let googleMapScript = document.createElement('script');
-                googleMapScript.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE.map.key;
-                googleMapScript.id = "googleMapScript";
-                googleMapScript.addEventListener("load", this.setMap());
-                document.head.appendChild(googleMapScript);
-            } else {
-                document.getElementById("googleMapScript").addEventListener("load", this.setMap());
-            }
+        
+        async mounted() {
+            const googleMapApi = await GoogleMapsApiLoader({
+                apiKey: GOOGLE.map.key
+            }).catch(err => {
+                console.log(err);
+                alert("Something went wrong on Google Map. Please try refreshing the page");
+            });
+            
+            this.google = googleMapApi;
+            this.initializeMap();
         },
+
         methods: {
+            initializeMap() {
+                this.map = new this.google.maps.Map(this.$refs.customerAddressMap, {
+                    center: this.position,
+                    zoom: 14,
+                    streetViewControl: false,
+                    mapTypeId: this.google.maps.MapTypeId.ROADMAP,
+                    disableDefaultUI: true 
+                });
+
+                var _this = this;
+                var infoWindow = new this.google.maps.InfoWindow({content: 'Your place', position: this.position});
+                this.map.addListener('click', function(mapsMouseEvent) {
+                    infoWindow.close();
+                    infoWindow = new _this.google.maps.InfoWindow({content: 'Your place', position: mapsMouseEvent.latLng});
+                    infoWindow.open(_this.map);
+
+                    _this.position.lat = mapsMouseEvent.latLng.lat();
+                    _this.position.lng = mapsMouseEvent.latLng.lng();
+                    
+                    _this.saveLocation = true;
+                });
+
+                infoWindow.open(_this.map);
+            },
+
             updateLocation: function() {
                 if (this.saveLocation) {
                     this.authRef.update({
@@ -63,32 +92,8 @@
                     alert("invalid request");
                 }
             },
-            setMap: function() {
-
-                var _this = this;
-                var map = new window.google.maps.Map(document.getElementById("customerAddressMap"), {
-                    center: this.position,
-                    zoom: 14,
-                    streetViewControl: false,
-                    mapTypeId: window.google.maps.MapTypeId.ROADMAP,
-                    disableDefaultUI: true 
-                });
-
-                var infoWindow = new window.google.maps.InfoWindow({content: 'Your place', position: this.position});
-                map.addListener('click', function(mapsMouseEvent) {
-                    infoWindow.close();
-                    infoWindow = new window.google.maps.InfoWindow({content: 'Your place', position: mapsMouseEvent.latLng});
-                    infoWindow.open(map);
-
-                    _this.position.lat = mapsMouseEvent.latLng.lat();
-                    _this.position.lng = mapsMouseEvent.latLng.lng();
-                    
-                    _this.saveLocation = true;
-                });
-
-                infoWindow.open(map);
-            }
         },
+        
         beforeDestroy() {
             this.auth = null;
             this.authRef = null;

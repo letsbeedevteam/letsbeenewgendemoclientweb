@@ -156,3 +156,9 @@
   height: 600px;
   background-color: grey;
 }
+
+.card-text {
+  text-overflow: ellipsis;
+white-space: nowrap;
+overflow: hidden;
+}
