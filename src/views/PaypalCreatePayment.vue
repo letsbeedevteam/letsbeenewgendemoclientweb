@@ -1,6 +1,6 @@
 <template>
-    <div>
-
+    <div class="text-center">
+        <img src="/images/loader.gif" alt="loading">
     </div>
 </template>
 
@@ -17,8 +17,9 @@
             }
         },
         created() {
-
-            orderCollection.doc(this.order_id).get().then(
+            
+            var orderRef = orderCollection.doc(this.order_id);
+            orderRef.get().then(
                 (result) => {
                     if (!result.exists) {
                         alert("This payment is invalid");
@@ -26,7 +27,7 @@
                     }
                     
                     let order = { id: result.id, ...result.data()};
-console.log(order);
+
                     if (order.payment.method != "paypal") { 
                         alert("This Payment is not paypal");
                         window.close();
@@ -37,36 +38,25 @@ console.log(order);
                         window.close();
                         return false;
                     }
-                    if (!order.payment.details.orderID) {
-                        alert("Invalid Request");
-                        window.close();
-                        return false;
-                    }
 
                     this.getPaypalToken().then((token) => {
-                        console.log(token);
+                        console.log("GetPaypalToken", token);
 
-                        this.checkOrder(token, order).then(result => {
-                            console.log(result);
+                        var total_price = order.menu_orders.price + order.delivery_fee;
+                        this.createOrder(token.data.access_token, order.id, total_price).then(order_result => {
+                            console.log("CreatePaypalOrder", order_result);
 
-                            if (result.data.status == "CREATED") {
-                                console.log(JSON.stringify(token));
-                                console.log(JSON.stringify(result));
-                                alert("pause here");
-                                // this.$router.replace("https://www.sandbox.paypal.com/checkoutnow?token=" + order.payment.details.orderID);
-                                window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order.payment.details.orderID;
-                            } else {
-                                alert("status is not 'CREATED'");
+                            this.updateOrderPayment(orderRef, order_result.data.id).then(update_result => {
+                                console.log("UpdateOrderPaypalID", update_result);
 
-                            }
-                        });
-                    }).catch((err) => {
+                                alert("Successfully create a paypal payment");
+                                window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order_result.data.id;
 
-                        console.log(err);
-                        if (err.response) {
-                            console.log(err.response.data)
-                        }
-                    })
+                            }).catch(this.catchError);
+
+                        }).catch(this.catchError);
+
+                    }).catch(this.catchError);
 
                 }
             )
@@ -90,7 +80,53 @@ console.log(order);
                     }
                 );
             },
-            checkOrder: function(token, order) {
+            createOrder: function(access_token, order_id, total_price) {
+                return axios.post(
+                    "https://api.sandbox.paypal.com/v2/checkout/orders",
+                    {
+                        "intent": "CAPTURE",
+                        "purchase_units": [
+                            {
+                                "amount": {
+                                    "currency_code": "PHP",
+                                    "value": total_price
+                                }
+                            }
+                        ],
+                        "application_context": {
+                            "brand_name": "Let's Bee",
+                            "return_url": "http://localhost:8080/payment/paypal/return?order_id=" + order_id,
+                            "cancel_url": "http://localhost:8080/payment/paypal/cancel?order_id=" + order_id
+                        }
+                    },
+                    {
+                        headers: {
+                            'Content-Type':'application/json',
+                            'Authorization': "Bearer " + access_token,
+                        },
+                    }
+                );
+            },
+
+            catchError: function(err) {
+                console.log(err);
+                if (err.response) {
+                    console.log(err.response.data)
+                }
+            },
+
+            updateOrderPayment: function(orderRef, order_id) {
+                return orderRef.update({
+                    payment: {
+                        method: "paypal",
+                        status: "pending",
+                        details: {
+                            orderID: order_id
+                        }
+                    }
+                });
+            }
+            /* checkOrder: function(token, order) {
                 
                 return axios.get(
                     "https://api.sandbox.paypal.com/v2/checkout/orders/" + order.payment.details.orderID,
@@ -102,7 +138,7 @@ console.log(order);
                     }
                 );
 
-            },
+            }, */
 
         }
     }

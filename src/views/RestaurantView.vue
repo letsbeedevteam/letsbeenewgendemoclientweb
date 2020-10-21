@@ -242,12 +242,7 @@
                     payment: {
                         method: payment_method,
                         status: payment_status,
-                        details: payment_details /* -> {
-                                paymentID: ""
-                                orderID: data.orderID,
-                                payerId: data.payerID,
-                                facilitatorAccessToken: data.facilitatorAccessToken,
-                                status: details.status} */
+                        details: payment_details
                     }
                 }).then((result) => {
                     if (!result.id) {

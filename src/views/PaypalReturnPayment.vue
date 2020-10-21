@@ -1,21 +1,22 @@
 <template>
-    <div>
+    <div class="text-center">
         <div v-if="processing">
-            <h1 class="text-center">Processing...</h1>
+            <h1>Processing...</h1>
+            <img src="/images/loader.gif" alt="loading">
         </div>
         <div v-else>
-            <h1 class="text-center">Payment has been accepted</h1>
+            <h1>Payment has been accepted</h1>
             <button type="button" class="btn btn-primary" @click="closeWindow"> Close</button>
         </div>
     </div>
 </template>
 
 <script>
-    import { PAYPAL } from '../config'
+    import { FIREBASE, PAYPAL } from '../config'
     import axios from 'axios'
     import qs from 'querystring'
 
-    import { orderCollection } from '../firebase-config'
+    import { orderCollection, restaurantCollection } from '../firebase-config'
 
     export default {
         data() {
@@ -23,21 +24,24 @@
                 processing: true,
                 token: this.$route.query.token,
                 payer_id: this.$route.query.PayerID,
+                order_id: this.$route.query.order_id
             }
         },
         created() {
 
-            orderCollection.where("payment.method", "==", "paypal").where("payment.details.orderID", "==", this.token).get().then((result) => {
-                console.log(result);
+            
+            var orderRef = orderCollection.doc(this.order_id);
+            orderRef.get().then((result) => {
+                console.log("OrderResult", result);
 
-                if (result.empty) {
+                if (!result.exists) {
                     alert("No Ordered found");
                     return false;
                 }
 
-                let orders = result.docs.map(order => { return { id: order.id, ...order.data() } });
+                let order = { id: result.id, ...result.data()};
 
-                console.log(orders);
+                console.log(order);
 
                 this.getPaypalToken().then((token) => {
                     console.log(token);
@@ -45,7 +49,7 @@
                     this.getOrder(token.data.access_token).then((order_result) => {
                         console.log(order_result);
                         
-                        if (!order_result.data.status == "APPROVED") {
+                        if (order_result.data.status != "APPROVED") {
                             alert("Payment is not approved");
                             return false;
                         }
@@ -58,23 +62,25 @@
                                 return false;
                             }
 
-                            this.processing = false;
+                            this.updateOrderPayment(orderRef).then(update => {
+                                console.log(update);
 
-                            orderCollection.doc(orders[0].id).update({
-                                payment: {
-                                    method: "paypal",
-                                    status: "paid",
-                                    details: {
-                                        orderID: this.token,
-                                        payerID: this.payer_id,
-                                    }
-                                }
-                            })
-                        });
+                                this.processing = false;
 
-                    });
-                })
-            });
+                                this.sendNotification(order.restaurant_id, order.menu_orders.name).then(notify => {
+                                    console.log(notify);
+                                });
+
+                            });
+
+                        }).catch(this.catchError);
+
+                    }).catch(this.catchError);
+
+                }).catch(this.catchError);
+
+            }).catch(this.catchError);
+
         },
 
         methods: {
@@ -122,8 +128,67 @@
                 )
             },
 
+            updateOrderPayment: function(orderRef) {
+                return orderRef.update({
+                    payment: {
+                        method: "paypal",
+                        status: "paid",
+                        details: {
+                            orderID: this.token,
+                            payerID: this.payer_id,
+                        }
+                    }
+                });
+            },
+            
+            sendNotification: function(restaurant_id, menu_order_name) {
+                restaurantCollection.doc(restaurant_id).get().then(resto_result => {
+                    console.log("RestaurantResult", resto_result);
+
+                    if (!resto_result.exists) {
+                        alert("No Ordered found");
+                        return false;
+                    }
+
+                    let restaurant = { id: resto_result.id, ...resto_result.data()};
+                    
+                    return axios.post(
+                        'https://fcm.googleapis.com/fcm/send', 
+                        {
+                            notification: {
+                                body: "New order",
+                                title: "There's new order " + menu_order_name
+                            },
+                            priority: "high",
+                            data: {
+                                restaurantId: restaurant_id,
+                                body: "New order",
+                                title: "There's new order " + menu_order_name
+                            },
+                            click_action: "FLUTTER_NOTIFICATION_CLICK",
+                            to: restaurant.notification_token
+                        },
+                        {
+                            headers: {
+                                "Content-Type": "application/json",
+                                'Authorization': "key=" + FIREBASE.cloudMessaging.serverKey,
+                            }
+                        }
+                    ).then(function(response) {
+                        console.log(response);
+                    });
+                });
+            },
+
             closeWindow: function() {
                 window.close();
+            },
+            
+            catchError: function(err) {
+                console.log(err);
+                if (err.response) {
+                    console.log(err.response.data)
+                }
             }
             /* checkPayment: function(result) {
                 return axios.get(

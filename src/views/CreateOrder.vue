@@ -6,11 +6,11 @@
 
 <script>
     import firebase from 'firebase'
-    import qs from 'querystring'
-    import axios from 'axios'
+    // import qs from 'querystring'
+    // import axios from 'axios'
 
     import { userCollection, orderCollection } from '../firebase-config'
-    import { PAYPAL } from '../config'
+    // import { PAYPAL } from '../config'
 
     export default {
         created() {
@@ -25,65 +25,50 @@
 
                     this.auth = {id: auth.id, ...auth.data()};
 
-                    this.getPaypalToken().then((token) => {
-                        // console.log(token);
+                    orderCollection.add({
+                        restaurant_id: "",
+                        user_id: this.auth.id,
+                        menu_orders: {
+                            name: "Chicken joy",
+                            price: 75
+                        },
+                        status: 1,
+                        ordered_time: firebase.firestore.Timestamp.fromDate(new Date()),
+                        restaurant_pick_time: null,
+                        rider_pick_time: null,
+                        rider_pick_up_time: null,
+                        delivered_time: null,
+                        delivery_fee: 100,
+                        rider_id: null,
+                        reason: "",
+                        chats: [],
+                        customer_location: new firebase.firestore.GeoPoint(this.auth.location.latitude, this.auth.location.longitude),
+                        payment: {
+                            method: "paypal",
+                            status: "pending",
+                            details: null
+                        }
+                    }).then((result) => {
+                        if (!result.id) {
+                            alert("Something went wrong. (Placing order). Please try again");
+                            return false;
+                        }
+                        alert("Successfully Created");
+                        console.log(result);
 
-                        this.createPaypelOrder(token).then((order_result) => {
-                            // console.log(order_result);
-
-                            orderCollection.add({
-                                restaurant_id: "",
-                                user_id: this.auth.id,
-                                menu_orders: {
-                                    name: "Chicken joy",
-                                    price: 75
-                                },
-                                status: 1,
-                                ordered_time: firebase.firestore.Timestamp.fromDate(new Date()),
-                                restaurant_pick_time: null,
-                                rider_pick_time: null,
-                                rider_pick_up_time: null,
-                                delivered_time: null,
-                                delivery_fee: 100,
-                                rider_id: null,
-                                reason: "",
-                                chats: [],
-                                customer_location: new firebase.firestore.GeoPoint(this.auth.location.latitude, this.auth.location.longitude),
-                                payment: {
-                                    method: "paypal",
-                                    status: "pending",
-                                    details: {
-                                        orderID: order_result.data.id
-                                    }
-                                }
-                            }).then((result) => {
-                                if (!result.id) {
-                                    alert("Something went wrong. (Placing order). Please try again");
-                                    return false;
-                                }
-                                alert("Successfully Created");
-                                console.log(result);
-
-                                this.$router.replace("/payment/" + result.id + "/paypal");
-                            }).catch((err) => {
-                                alert("Something went wrong. Failed to create order");
-                                console.log(err);
-                            });
-                        }).catch((err) => {
-                            alert("Something went wrong. Failed to create paypal order");
-                            console.log(err);
-                        });
-
+                        this.$router.replace("/payment/" + result.id + "/paypal");
                     }).catch((err) => {
-                        alert("Something went wrong. Failed to get paypal token");
+                        alert("Something went wrong. Failed to create order");
                         console.log(err);
                     });
+
+                    
                 }
             );
 
         },
         methods: {
-            getPaypalToken: function() {
+            /* getPaypalToken: function() {
                 return axios.post(
                     "https://api.sandbox.paypal.com/v1/oauth2/token", 
                     qs.stringify({"grant_type":"client_credentials"}),
@@ -127,7 +112,7 @@
                         },
                     }
                 );
-            }
+            } */
         }
     }
 </script>

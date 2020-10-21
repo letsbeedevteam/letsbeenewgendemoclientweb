@@ -96,16 +96,6 @@ const routes = [
     name: "PaypalCreatePayment",
     component: PaypalCreatePayment,
   },
-  /* {
-    path: "/payment/:order_id/paypal/success",
-    name: "PaypalCreatePayment",
-    component: PaypalCreatePayment,
-  }, */
-  /* {
-    path: "/payment/:order_id/paypal/create",
-    name: "PaypalCreatePayment",
-    component: PaypalCreatePayment,
-  }, */
   {
     path: "/payment/paypal/return",
     name: "PaypalReturnPayment",
