@@ -2,12 +2,19 @@
     <div class="text-center">
         <div v-if="processing">
             <h1>Processing...</h1>
-            <img src="/images/loader.gif" alt="loading">
+            <img src="/images/loading.gif" alt="loading">
         </div>
         <div v-else>
             <h1>Payment has been accepted</h1>
-            <small>You can now safely close this window/page</small>
+            <div v-if="is_mobile">
+                <small class="d-block">You can now safely close this window/page</small>
+                <a class="d-block" href="/payment/success">Go back to Dashboard</a>
+            </div>
+            <div v-else>
+                <a v-bind:href="'http://localhost:8080/orders/' + order_id" class="btn btn-primary">View your Order</a>
+            </div>
         </div>
+
     </div>
 </template>
 
@@ -21,7 +28,8 @@
         data() {
             return {
                 processing: true,
-                order_id: this.$route.query.order_id
+                order_id: this.$route.query.order_id,
+                is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false
             }
         },
         created() {

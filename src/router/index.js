@@ -4,7 +4,7 @@ import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
 import Register from '../views/Register.vue'
 import Login from '../views/Login.vue'
-import Dashboard from '../views/Dashboard.vue'
+import Restaurant from '../views/Restaurant.vue'
 import RestaurantView from '../views/RestaurantView.vue'
 import Order from '../views/Order.vue'
 import OrderView from '../views/OrderView.vue'
@@ -17,6 +17,7 @@ import PaypalCancelPayment from '../views/PaypalCancelPayment.vue'
 import GCashCreatePayment from '../views/GCashCreatePayment.vue'
 import GCashSuccessPayment from '../views/GCashSuccessPayment.vue'
 import GCashFailedPayment from '../views/GCashFailedPayment.vue'
+import PaymentSuccess from '../views/PaymentSuccess.vue'
 
 import { auth } from '../firebase-config'
 
@@ -41,7 +42,15 @@ const routes = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: Dashboard,
+    component: Restaurant,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/retaurants',
+    name: 'Restaurant',
+    component: Restaurant,
     meta: {
       requiresAuth: true
     }
@@ -123,6 +132,11 @@ const routes = [
     path: "/payment/gcash/failed",
     name: "GCashFailedPayment",
     component: GCashFailedPayment,
+  },
+  {
+    path: "/payment/success",
+    name: "PaymentSuccess",
+    component: PaymentSuccess,
   },
 ]
 

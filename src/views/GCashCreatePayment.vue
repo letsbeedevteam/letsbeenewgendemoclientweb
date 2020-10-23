@@ -1,6 +1,6 @@
 <template>
     <div class="text-center">
-        <img src="/images/loader.gif" alt="loading">
+        <img src="/images/loading.gif" alt="loading">
     </div>
 </template>
 
@@ -14,6 +14,7 @@
         data() {
             return {
                 order_id: this.$route.params.order_id,
+                is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false
             }
         },
         created() {
@@ -59,6 +60,7 @@
 
         methods: {
             createSource: function(order_id, amount) {
+                var mobileQuery = this.is_mobile ? "&mobile=true" : "";
                 return axios.post(
                     "https://api.paymongo.com/v1/sources",
                     {
@@ -66,8 +68,8 @@
                             attributes: {
                                 amount: parseInt(amount + "00"),
                                 redirect: {
-                                    success: NETWORK_URL + "/payment/gcash/success?order_id=" + order_id,
-                                    failed: NETWORK_URL + "/payment/gcash/failed?order_id=" + order_id,
+                                    success: NETWORK_URL + "/payment/gcash/success?order_id=" + order_id + mobileQuery,
+                                    failed: NETWORK_URL + "/payment/gcash/failed?order_id=" + order_id + mobileQuery,
                                 },
                                 billing: {
                                     address: {

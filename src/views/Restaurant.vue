@@ -26,11 +26,13 @@
             }
         },
         created() {
+            this.$store.commit("showLoader");
             restaurantCollection.get().then(
                 (result) => {
                     this.restaurants = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
                     });
+                    this.$store.commit("hideLoader");
                 }
             )
         },

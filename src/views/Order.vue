@@ -11,7 +11,7 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody v-if="orders.length > 0">
                 <tr v-for="order in orders" :key="order.id">
                     <td>{{ order.menu_orders.name }}</td>
                     <td>{{ order.menu_orders.price }}</td>
@@ -19,6 +19,11 @@
                     <td>
                         <router-link v-bind:to="'/orders/' + order.id" class="btn btn-primary">View</router-link>
                     </td>
+                </tr>
+            </tbody>
+            <tbody v-else>
+                <tr>
+                    <td colspan="4" class="text-center"> No orders found</td>
                 </tr>
             </tbody>
         </table>
@@ -38,6 +43,7 @@
             }
         },
         created() {
+            this.$store.commit("showLoader");
             this.$session.start();
             let auid = this.$session.get("auid");
 
@@ -46,6 +52,7 @@
                     this.orders = result.docs.map(doc => {
                         return { id: doc.id, ...doc.data() }
                     });
+                    this.$store.commit("hideLoader");
                 }
             );
         },

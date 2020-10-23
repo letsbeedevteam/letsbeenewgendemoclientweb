@@ -1,6 +1,6 @@
 <template>
     <div class="text-center">
-        <img src="/images/loader.gif" alt="loading">
+        <img src="/images/loading.gif" alt="loading">
     </div>
 </template>
 
@@ -14,6 +14,7 @@
         data() {
             return {
                 order_id: this.$route.params.order_id,
+                is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false
             }
         },
         created() {
@@ -51,11 +52,11 @@
                             alert("Successfully create a paypal payment");
                             window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order_result.data.id;
 
-                        }).catch(this.catchError);
+                        }, (this.catchError)).catch(this.catchError);
 
-                    }).catch(this.catchError);
+                    }, (this.catchError)).catch(this.catchError);
 
-                }).catch(this.catchError);
+                }, (this.catchError)).catch(this.catchError);
 
             });
         },
@@ -79,22 +80,23 @@
                 );
             },
             createOrder: function(access_token, order_id, total_price) {
+                var mobileQuery = this.is_mobile ? "&mobile=true" : "";
                 return axios.post(
                     "https://api.sandbox.paypal.com/v2/checkout/orders",
                     {
-                        "intent": "CAPTURE",
-                        "purchase_units": [
+                        intent: "CAPTURE",
+                        purchase_units: [
                             {
-                                "amount": {
-                                    "currency_code": "PHP",
-                                    "value": total_price
+                                amount: {
+                                    currency_code: "PHP",
+                                    value: total_price
                                 }
                             }
                         ],
-                        "application_context": {
-                            "brand_name": "Let's Bee",
-                            "return_url": NETWORK_URL + "/payment/paypal/return?order_id=" + order_id,
-                            "cancel_url": NETWORK_URL + "/payment/paypal/cancel?order_id=" + order_id
+                        application_context: {
+                            brand_name: "Let's Bee",
+                            return_url: NETWORK_URL + "/payment/paypal/return?order_id=" + order_id + mobileQuery,
+                            cancel_url: NETWORK_URL + "/payment/paypal/cancel?order_id=" + order_id + mobileQuery,
                         }
                     },
                     {
@@ -104,13 +106,6 @@
                         },
                     }
                 );
-            },
-
-            catchError: function(err) {
-                console.log(err);
-                if (err.response) {
-                    console.log(err.response.data)
-                }
             },
 
             updateOrderPayment: function(orderRef, order_id) {
@@ -123,7 +118,15 @@
                         }
                     }
                 });
-            }
+            },
+
+            catchError: function(err) {
+                console.log(err);
+                alert("Something went wrong");
+                if (err.response) {
+                    console.log(err.response.data)
+                }
+            },
         }
     }
 </script>

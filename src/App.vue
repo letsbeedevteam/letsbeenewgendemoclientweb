@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <loader></loader>
     <top-header></top-header>
     <router-view/>
   </div>
@@ -7,20 +8,16 @@
 
 <script>
   import TopHeader from "./components/Top-Header"
+  import Loader from "./components/Loader"
 
   export default {
-    components: {'top-header': TopHeader},
+    components: {
+      'top-header': TopHeader,
+      'loader': Loader,
+    },
   }
 </script>
 
 <style scoped>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* text-align: center; */
-  color: #2c3e50;
-}
-
-@import url('assets/css/style.css');
+  @import url('assets/css/style.css');
 </style>

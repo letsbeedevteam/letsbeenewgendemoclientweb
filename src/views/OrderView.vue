@@ -159,6 +159,7 @@
             }
         },
         created() {
+            this.$store.commit("showLoader");
             this.orderDoc = orderCollection.doc(this.order_id)
             this.orderRef = this.orderDoc.onSnapshot((order) => {
                 if (!order.exists) {
@@ -181,6 +182,7 @@
 
                             if (this.isLoadMap) {
                                 this.initializeMap();
+                                this.$store.commit("hideLoader");
                             }
                         } 
                     );
@@ -212,6 +214,7 @@
             this.isLoadMap = true;
             if (this.restaurant != null) {
                 this.initializeMap();
+                this.$store.commit("hideLoader");
             }
         },
         

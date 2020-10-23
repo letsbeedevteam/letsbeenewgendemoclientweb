@@ -1,3 +1,12 @@
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2c3e50;
+  position: relative;
+  min-height: 100vh;
+}
+#navbar { z-index: 99; }
 .form-signin {
   width: 100%;
   max-width: 500px;
@@ -14,9 +23,7 @@
   padding: 10px;
   font-size: 16px;
 }
-.form-signin .form-control:focus {
-  z-index: 2;
-}
+.form-signin .form-control:focus { z-index: 2; }
 .form-signin input[type="email"] {
   margin-bottom: -1px;
   border-bottom-right-radius: 0;
@@ -56,35 +63,15 @@
   border:10px solid #343A40;
   border-color: transparent transparent #343A40 transparent;
 }
-.dropdown-menu.dm-notification .head {
-  padding:5px 15px;
-  border-radius: 3px 3px 0px 0px;
-}
-.dropdown-menu.dm-notification .footer {
-  padding:5px 15px;
-  border-radius: 0px 0px 3px 3px; 
-}
-.dropdown-menu.dm-notification .notification-box {
-  padding: 10px; 
-}
-.bg-gray {
-  background-color: #eee;
-}
+.dropdown-menu.dm-notification .head { padding:5px 15px; border-radius: 3px 3px 0px 0px; }
+.dropdown-menu.dm-notification .footer { padding:5px 15px; border-radius: 0px 0px 3px 3px;  }
+.dropdown-menu.dm-notification .notification-box { padding: 10px;  }
+.bg-gray { background-color: #eee; }
 @media (max-width: 640px) {
-  .dropdown-menu.dm-notification {
-    top: 50px;
-    left: -16px;  
-    width: 290px;
-  } 
-  .nav {
-    display: block;
-  }
-  .nav .nav-item,.nav .nav-item a {
-    padding-left: 0px;
-  }
-  .message {
-    font-size: 13px;
-  }
+  .dropdown-menu.dm-notification { top: 50px; left: -16px;  width: 290px; } 
+  .nav { display: block; }
+  .nav .nav-item,.nav .nav-item a { padding-left: 0px; }
+  .message { font-size: 13px; }
 }
 .opacity-high { opacity: 1; }
 .opacity-mh { opacity: 0.75; }
@@ -92,12 +79,8 @@
 .opacity-low { opacity: 0.25; }
 .opacity-none { opacity: 0; }
 
-.notification-box:hover {
-  background-color: #e4e4e4;
-}
-.notification-box.active {
-  background-color: #fdc70136;
-}
+.notification-box:hover { background-color: #e4e4e4; }
+.notification-box.active { background-color: #fdc70136; }
 .nb-content {
   display: inline-block;
   width: 440px;
@@ -105,17 +88,10 @@
   overflow: hidden !important;
   text-overflow: ellipsis;
 }
-.nb-link {
-  display: block;
-  cursor: pointer;
-}
-.nb-link:hover, .nb-link .text-info {
-  text-decoration: none;
-}
+.nb-link { display: block; cursor: pointer; }
+.nb-link:hover, .nb-link .text-info { text-decoration: none; }
 .nb-content { color: #000000;}
-#orderDd {
-  position: relative;
-}
+#orderDd { position: relative; }
 #orderDd .new {
   position: absolute;
   width: 10px;
@@ -125,33 +101,12 @@
   right: 5px;
 }
 
-.chat-box {
-  position: relative;
-  height: 600px;
-}
-.chat-box .chat-messages {
-  height: 550px;
-}
-.chat-box .chat-message {
-  background-color: rgba(0,0,0,.03);
-  margin-bottom: 0.5em;
-  padding: 0.5em;
-}
-.chat-box .chat-message .chat-user-name {
-  font-size: 0.75em;
-}
-.chat-box .chat-message .chat-user-date {
-  font-size: 0.5em;
-}
-.chat-box .chat-input {
-  height: 50px;
-  width: 100%;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  background-color: #ffffff;
-  padding: 0.35em;
-}
+.chat-box { position: relative; height: 600px; }
+.chat-box .chat-messages { height: 550px; }
+.chat-box .chat-message { background-color: rgba(0,0,0,.03); margin-bottom: 0.5em; padding: 0.5em; }
+.chat-box .chat-message .chat-user-name { font-size: 0.75em; }
+.chat-box .chat-message .chat-user-date { font-size: 0.5em; }
+.chat-box .chat-input { height: 50px; width: 100%; position: absolute; bottom: 0; left: 0; background-color: #ffffff; padding: 0.35em; }
 #orderMap {
   height: 600px;
   background-color: grey;
@@ -159,6 +114,33 @@
 
 .card-text {
   text-overflow: ellipsis;
-white-space: nowrap;
-overflow: hidden;
+  white-space: nowrap;
+  overflow: hidden;
 }
+
+.paypal-logo {
+  vertical-align: middle;
+  height: 100%;
+  text-align: left;
+  padding: 0;
+  display: inline-block;
+  background: none;
+  border: none;
+  width: auto;
+}
+.btn-paypal {
+  background-color: #ffc439 !important;
+  padding: .275rem .75rem !important;
+}
+#loader {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  display: none;
+  background-color: #0000003d;
+  overflow: hidden;
+}
+#loader.show { display: flex;}
+#loader .lcon { margin: auto; }
+#loader .lcon img { height: 100px; }
