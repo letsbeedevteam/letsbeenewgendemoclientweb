@@ -159,6 +159,8 @@
             }
         },
         created() {
+            document.title = "Let's Bee | Order | " + this.order_id;
+
             this.$store.commit("showLoader");
             this.orderDoc = orderCollection.doc(this.order_id)
             this.orderRef = this.orderDoc.onSnapshot((order) => {
@@ -167,9 +169,9 @@
                     this.$router.replace({name: "Dashboard"});
                     return false;
                 }
-                // console.log(order.id);
+
                 this.order = order.data();
-                // console.log(this.order);
+
                 if (this.restaurant == null && this.order.restaurant_id) {
                     restaurantCollection.doc(this.order.restaurant_id).get().then(
                         (restaurant) => {
@@ -177,7 +179,7 @@
                                 alert("Invalid Restaurant");
                                 this.$router.replace({name: "Dashboard"});
                             }
-    
+
                             this.restaurant = {id: restaurant.id, ...restaurant.data()};
 
                             if (this.isLoadMap) {

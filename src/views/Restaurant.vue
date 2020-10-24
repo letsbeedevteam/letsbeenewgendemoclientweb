@@ -26,6 +26,8 @@
             }
         },
         created() {
+            document.title = "Let's Bee | Restaurant List";
+
             this.$store.commit("showLoader");
             restaurantCollection.get().then(
                 (result) => {

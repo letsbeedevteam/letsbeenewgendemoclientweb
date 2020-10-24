@@ -11,8 +11,9 @@ const ORDER_STATUS = [
 
 const ORDER_PAYMENT = {
     paypal: "Paypal",
-    credit_card: "Credit Card",
-    cod: "Cash on delivery"
+    cod: "Cash on delivery",
+    card: "Debit/Credit Card",
+    gcash: "GCash"
 }
 
 export {

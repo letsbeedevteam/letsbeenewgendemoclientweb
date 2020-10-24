@@ -1,6 +1,6 @@
 <template>
     <div id="loader" :class="isLoader">
-        <div class="lcon" @click="hideLoader">
+        <div class="lcon">
             <img src="/images/loading.gif" alt="loading">
         </div>
     </div>
@@ -23,10 +23,5 @@
             }
         },
 
-        methods: {
-            hideLoader: function() {
-                this.$store.commit("hideLoader");
-            }
-        }
     }
 </script>

@@ -43,6 +43,8 @@
             }
         },
         created() {
+            document.title = "Let's Bee | Order Lists";
+            
             this.$store.commit("showLoader");
             this.$session.start();
             let auid = this.$session.get("auid");
