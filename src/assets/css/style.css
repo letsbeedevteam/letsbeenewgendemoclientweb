@@ -134,7 +134,7 @@
 }
 #loader {
   position: absolute;
-  z-index: 100;
+  z-index: 1051;
   width: 100%;
   height: 100%;
   display: none;
@@ -144,3 +144,4 @@
 #loader.show { display: flex;}
 #loader .lcon { margin: auto; }
 #loader .lcon img { height: 100px; }
+#threeDs-auth-frame { width: 100%; height: 500px; border: none; }

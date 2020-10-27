@@ -47,7 +47,7 @@
                     </select>
                 </div>
                 <div class="col">
-                    <input type="password" name="cvc" id="cvc" class="form-control" v-model="details.cvc" placeholder="CVC">
+                    <input type="password" name="cvc" id="cvc" class="form-control" v-model="details.cvc" placeholder="CVC" @keypress="checkCVC($event)">
                 </div>
             </div>
 
@@ -72,6 +72,20 @@
                 <button class="btn btn-lg btn-primary btn-block w-100" type="submit">Continue</button>
             </div>
         </form>
+        
+        <!-- <div class=" container authentication-container mb-5"></div> -->
+
+        <div ref="modal" class="modal fade" :class="{show, 'd-block': active}" tabindex="-1" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" @click="toggleModal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body"></div>
+                </div>
+            </div>
+        </div>
+        <div v-if="active" class="modal-backdrop fade show"></div>
 
     </div>
 </template>
@@ -100,6 +114,8 @@
                     email: null,
                     phone: null,
                 },
+                active: false,
+                show: false
             }
         },
 
@@ -141,16 +157,6 @@
 
         methods: {
 
-            isNumber: function(evt) {
-                evt = (evt) ? evt : window.event;
-                var charCode = (evt.which) ? evt.which : evt.keyCode;
-                if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
-                    evt.preventDefault();
-                } else {
-                    return true;
-                }
-            },
-
             createPaymentIntent: function(amount, order_name) {
                 return axios.post(
                     "https://api.paymongo.com/v1/payment_intents",
@@ -188,18 +194,41 @@
                     console.log(method_result);
 
                     this.attachPayment(method_result.data.data.id).then((attach_result) => {
-                        console.log(attach_result);
+                        // console.log(attach_result);
                         var paymentIntent = attach_result.data.data;
                         var paymentIntentStatus = paymentIntent.attributes.status;
                         
                         if (paymentIntentStatus === 'awaiting_next_action') {
-                            // Render your modal for 3D Secure Authentication since next_action has a value. You can access the next action via paymentIntent.attributes.next_action.
 
-                            // this.secureAuthentication().then((secure_result) => {
+                            // window.location = paymentIntent.attributes.next_action.redirect.url;
+                            document.querySelector(".form-signin").style.display = "none";
 
-                            // });
+                            var modalBody = document.querySelector(".modal-body");
+                            var frame = document.createElement("iframe");
+                            frame.setAttribute("src", paymentIntent.attributes.next_action.redirect.url);
+                            frame.setAttribute("id", "threeDs-auth-frame");
+                            modalBody.appendChild(frame);
+                            frame.onload = () => {
+                                this.$store.commit("hideLoader");
+                            }
 
-                            window.location = paymentIntent.attributes.next_action.redirect.url;
+                            this.toggleModal();
+
+                            window.addEventListener('message', (ev) => {
+                                console.log(ev);
+                                
+                                if (ev.data != '3DS-authentication-complete') {
+                                    alert("Something went wrong");
+                                }
+                                this.toggleModal();
+                                this.$store.commit("showLoader");
+
+                                this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                                    console.log(pi_result);
+
+                                    this.validateStatus(pi_result);
+                                });
+                            });
 
                         } else if (paymentIntentStatus === 'succeeded') {
                             
@@ -211,11 +240,15 @@
                             });
 
                         } else if(paymentIntentStatus === 'awaiting_payment_method') {
-
                             alert(paymentIntent.attributes.last_payment_error);
                         }  else if (paymentIntentStatus === 'processing'){
-                            // You need to requery the PaymentIntent after a second or two. This is a transitory status and should resolve to `succeeded` or `awaiting_payment_method` quickly.
-                            this.getPaymentIntent();
+                            setTimeout(function () {
+                                this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                                    console.log(pi_result)
+
+                                    this.validateStatus(pi_result);
+                                });
+                            }, 2000);
                         }
 
 
@@ -276,10 +309,6 @@
                 )
             },
 
-            // secureAuthentication: function() {
-
-            // },
-
             updateOrder: function(paymentIntentID, clientKey) {
                 return orderCollection.doc(this.order_id).update({
                     payment: {
@@ -293,10 +322,74 @@
                 })
             },
 
-            getPaymentIntent: function() {
-                setTimeout(function () {
-                    alert('VIDEO HAS STOPPED');
-                }, 2000);
+            getPaymentIntent: function(paymentIntentID, clientKey) {
+                
+                return axios.get(
+                    'https://api.paymongo.com/v1/payment_intents/' + paymentIntentID + '?client_key=' + clientKey,
+                    {
+                        auth: {
+                            username: PAYMONGO.secretKey,
+                            password: PAYMONGO.secretKey
+                        }
+                    }
+                )
+            },
+
+            validateStatus: function(result) {
+                var paymentIntent = result.data.data;
+                var paymentIntentStatus = paymentIntent.attributes.status;
+
+                if (paymentIntentStatus === 'succeeded') {
+                    this.updateOrder(paymentIntent.id, paymentIntent.attributes.client_key).then((update_result) => {
+                        this.$store.commit("hideLoader");
+                        console.log(update_result);
+
+                        window.location = "/payment/card/success?order_id=" + this.order_id + this.mobileQuery; 
+                    });
+                } else if(paymentIntentStatus === 'awaiting_payment_method') {
+                    alert(paymentIntent.attributes.last_payment_error);
+                } else if (paymentIntentStatus === 'processing'){
+                    this.$store.commit("showLoader");
+                    setTimeout(function () {
+                        this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                            console.log(pi_result)
+
+                            this.validateStatus(pi_result);
+                        });
+                    }, 2000);
+                }
+            },
+
+            isNumber: function(evt) {
+                evt = (evt) ? evt : window.event;
+                var charCode = (evt.which) ? evt.which : evt.keyCode;
+                if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
+                    evt.preventDefault();
+                } else {
+                    return true;
+                }
+            },
+
+            checkCVC: function(evt) {
+                evt = (evt) ? evt : window.event;
+                var charCode = (evt.which) ? evt.which : evt.keyCode;
+                if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
+                    evt.preventDefault();
+                } else {
+                    if (this.details.cvc && this.details.cvc.toString().length > 2) {
+                        evt.preventDefault();
+                    }
+                    return true;
+                }
+            },
+
+            toggleModal: function() {
+                var body = document.querySelector("body");
+                this.active = !this.active;
+                this.active
+                    ? body.classList.add("modal-open")
+                    : body.classList.remove("modal-open");
+                setTimeout(() => (this.show = !this.show), 10);
             },
 
             catchError: function(err) {

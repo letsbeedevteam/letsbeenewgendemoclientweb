@@ -211,6 +211,7 @@
             }).catch(err => {
                 console.log(err);
                 alert("Something went wrong on Google Map. Please try refreshing the page");
+                this.$store.commit("hideLoader");
             });
 
             this.isLoadMap = true;

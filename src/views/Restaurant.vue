@@ -2,7 +2,7 @@
     <div class="container">
         <h1>Restaurants</h1>
         
-        <div class="row">
+        <div class="row mb-4">
             <div v-for="restaurant in restaurants" :key="restaurant.id" class="col-6">
                 <div class="card">
                     <h5 class="card-header">{{ restaurant.name}}</h5>
@@ -25,6 +25,7 @@
                 restaurants: []
             }
         },
+
         created() {
             document.title = "Let's Bee | Restaurant List";
 
@@ -38,6 +39,7 @@
                 }
             )
         },
+
         beforeDestroy() {
             this.restaurants = [];
         }
