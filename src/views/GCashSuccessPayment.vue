@@ -184,14 +184,13 @@
                                 'Authorization': "key=" + FIREBASE.cloudMessaging.serverKey,
                             }
                         }
-                    ).then(function(response) {
-                        console.log(response);
-                    });
+                    );
                 });
             },
 
             catchError: function(err) {
                 console.log(err);
+                alert("Something went wrong");
                 if (err.response) {
                     console.log(err.response.data)
                 }

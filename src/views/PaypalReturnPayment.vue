@@ -188,6 +188,7 @@
 
             catchError: function(err) {
                 console.log(err);
+                alert("Something went wrong");
                 if (err.response) {
                     console.log(err.response.data)
                 }

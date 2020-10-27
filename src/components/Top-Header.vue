@@ -50,7 +50,7 @@
                         <a class="nav-link" href="#" id="orderDd" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i class="fa fa-bell"></i>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dm-notification">
                             <li class="head text-light bg-dark">
                                 <span>Notifications (0)</span>
                             </li>
@@ -63,7 +63,7 @@
                         <a class="nav-link dropdown-toggle" href="#" id="userAccountDd" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             {{ auth_name }}
                         </a>
-                        <div class="dropdown-menu" aria-labelledby="userAccountDd">
+                        <div class="dropdown-menu dm-profile" aria-labelledby="userAccountDd">
                             <router-link to="/your-delivery-location" class="dropdown-item"> Your Delivery location</router-link>
                             <a class="dropdown-item" href="#" @click="SignOut">Logout</a>
                         </div>

@@ -63,6 +63,7 @@
   border:10px solid #343A40;
   border-color: transparent transparent #343A40 transparent;
 }
+.dropdown .dropdown-menu.dm-profile { left: unset; right: 0;}
 .dropdown-menu.dm-notification .head { padding:5px 15px; border-radius: 3px 3px 0px 0px; }
 .dropdown-menu.dm-notification .footer { padding:5px 15px; border-radius: 0px 0px 3px 3px;  }
 .dropdown-menu.dm-notification .notification-box { padding: 10px;  }
