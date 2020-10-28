@@ -75,115 +75,118 @@
 </template>
 
 <script>
-    import { db, auth, messaging } from "../firebase-config"
+import { db, auth, messaging } from "../firebase-config"
 
-    export default {
-        data() {
-            return {
-                loggedIn: false,
-                auth_name: "",
-                newNotification: false,
-                notification_token: "",
-                notifications: []
-            };
-        },
-        created() {
+export default {
+    data() {
+        return {
+            loggedIn: false,
+            auth_name: "",
+            newNotification: false,
+            notification_token: "",
+            notifications: []
+        };
+    },
+    created() {
+        this.$session.start();
+        
+        auth.onAuthStateChanged((authUser) => {
+            this.loggedIn = !!authUser;
 
-            auth.onAuthStateChanged((authUser) => {
-                this.loggedIn = !!authUser;
+            if (!authUser) {
+                return false;
+            }
 
-                if (!authUser) {
+            let userCollection = db.collection("users");
+            userCollection.where('uid', "==", authUser.uid).get().then(result => {
+                let users_data = result.docs.map(user => { return { id: user.id, ...user.data() } });
+                
+                let user_id = users_data[0].id;
+                this.auth_name = users_data[0].name;
+                console.log(user_id);
+
+                if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
+                    this.$session.set('auid', user_id);
+                }
+
+                if (messaging == null) {
                     return false;
                 }
-                let userCollection = db.collection("users");
-            
-                this.$session.start();
-                userCollection.where('uid', "==", authUser.uid).get().then(result => {
-                    let users_data = result.docs.map(user => { return { id: user.id, ...user.data() } });
-                    
-                    let user_id = users_data[0].id;
-                    this.auth_name = users_data[0].name;
-
-                    if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
-                        this.$session.set('auid', user_id);
-                    }
-
-                    if (messaging == null) {
+                
+                messaging.getToken().then((currentToken) => {
+                    if (!currentToken) {
+                        alert("No Instance ID token available. ")
                         return false;
                     }
-                    
-                    messaging.getToken().then((currentToken) => {
-                        if (!currentToken) {
-                            alert("No Instance ID token available. ")
-                            return false;
-                        }
 
-                        this.notification_token = currentToken;
+                    this.notification_token = currentToken;
 
-                        if (currentToken !== users_data[0].notification_token) {
-                            userCollection.doc(user_id).update({
-                                notification_token: currentToken
-                            });
-                        }
-
-                    }).catch((err) => {
-                        console.log('An error occurred while retrieving token. ', err);
-                    });
-
-                    messaging.onMessage((payload) => {
-                        let meta = JSON.parse(payload.data.meta);
-                        this.notifications.unshift({
-                            id: meta.id,
-                            type: payload.data.type,
-                            title: payload.notification.title,
-                            body: payload.notification.body,
-                            status: true,    
+                    if (currentToken !== users_data[0].notification_token) {
+                        userCollection.doc(user_id).update({
+                            notification_token: currentToken
                         });
-                        this.newNotification = true;
-                    });
+                    }
+
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
                 });
 
+                messaging.onMessage((payload) => {
+                    let meta = JSON.parse(payload.data.meta);
+                    this.notifications.unshift({
+                        id: meta.id,
+                        type: payload.data.type,
+                        title: payload.notification.title,
+                        body: payload.notification.body,
+                        status: true,    
+                    });
+                    this.newNotification = true;
+                });
+            });
+
+        });
+    },
+    methods: {
+        SignOut: function() {
+            auth.signOut().then(
+                () => {
+                    console.log("successfully logged out");
+                    this.$session.clear();
+
+                    this.$router.replace({name: "Login"});
+                },
+                err => {
+                    console.log(err);
+                }
+            )
+        },
+        validateNotifications: function() {
+            let status = false;
+            this.notifications.forEach((notification) => {
+                if (notification.status) {
+                    status = true;
+                    return notification;
+                }
+            });
+            this.newNotification = status;
+
+        },
+        openNotification: function(notification_id) {
+            this.notifications.forEach((notification) => {
+                if (notification.id == notification_id) {
+                    notification.status = false;
+                    this.validateNotifications();
+                    if (this.$router.currentRoute != '/' + notification.type + '/' + notification.id) {
+                        this.$router.push('/' + notification.type + '/' + notification.id);
+                    }
+                }
             });
         },
-        methods: {
-            SignOut: function() {
-                auth.signOut().then(
-                    () => {
-                        console.log("successfully logged out");
-                        this.$router.replace({name: "Login"});
-                    },
-                    err => {
-                        console.log(err);
-                    }
-                )
-            },
-            validateNotifications: function() {
-                let status = false;
-                this.notifications.forEach((notification) => {
-                    if (notification.status) {
-                        status = true;
-                        return notification;
-                    }
-                });
-                this.newNotification = status;
-
-            },
-            openNotification: function(notification_id) {
-                this.notifications.forEach((notification) => {
-                    if (notification.id == notification_id) {
-                        notification.status = false;
-                        this.validateNotifications();
-                        if (this.$router.currentRoute != '/' + notification.type + '/' + notification.id) {
-                            this.$router.push('/' + notification.type + '/' + notification.id);
-                        }
-                    }
-                });
-            },
-            
-        },
-        beforeDestroy() {
-            this.loggedIn = false;
-            this.auth_name = "";
-        }
+        
+    },
+    beforeDestroy() {
+        this.loggedIn = false;
+        this.auth_name = "";
     }
+}
 </script>

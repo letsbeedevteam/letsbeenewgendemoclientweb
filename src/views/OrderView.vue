@@ -1,7 +1,9 @@
 <template>
     <div class="container">
-        <h1 class="text-center">Order</h1>
-        <div class="text-center"><small  v-if="order">ID: {{ order_id }}</small></div>
+        <div class="mb-3">
+            <h1 class="text-center">Order</h1>
+            <div class="text-center"><small  v-if="order">ID: {{ order_id }}</small></div>
+        </div>
 
         <div class="row" >
             <div class="col-8" v-if="order">
@@ -33,7 +35,7 @@
                         </tr>
                         <tr>
                             <td>Status</td>
-                            <td>{{ order.payment.status }}</td>
+                            <td>{{ paymentStatus[order.payment.status] }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -66,7 +68,7 @@
                             <td>{{ formatFBtimestamp(order.rider_pick_up_time) }}</td>
                         </tr>
                         <tr v-if="order.delivered_time">
-                            <td>Delivered Tme</td>
+                            <td>Delivered Time</td>
                             <td>{{ formatFBtimestamp(order.delivered_time) }}</td>
                         </tr>
                     </tbody>
@@ -77,7 +79,7 @@
                     <table class="table">
                         <tbody>
                             <tr>
-                                <td>name</td>
+                                <td>Name</td>
                                 <td>{{ (rider.name) ? rider.name : "" }}</td>
                             </tr>
                             <tr>
@@ -133,176 +135,183 @@
 </template>
 
 <script>
-    import firebase from 'firebase'
-    import GoogleMapsApiLoader from 'google-maps-api-loader'
+import firebase from 'firebase'
+import GoogleMapsApiLoader from 'google-maps-api-loader'
 
-    import { ORDER_STATUS, ORDER_PAYMENT } from '../constant'
-    import { orderCollection, restaurantCollection, riderCollection } from "../firebase-config"
-    import { GOOGLE } from '../config'
-    
-    export default {
-        data() {
-            return {
-                statuss: ORDER_STATUS,
-                payments: ORDER_PAYMENT,
-                order_id: this.$route.params.order_id,
-                order: null,
-                orderRef: null,
-                orderDoc: null,
-                restaurant: null,
-                rider: null,
-                riderRef: null,
-                rider_marker: null,
-                google: null,
-                map: null,
-                message: ""
+import { ORDER_STATUS, ORDER_PAYMENT, MONTH, PAYMENT_STATUS } from '../constant'
+import { orderCollection, restaurantCollection, riderCollection } from "../firebase-config"
+import { GOOGLE } from '../config'
+
+export default {
+    data() {
+        return {
+            statuss: ORDER_STATUS,
+            payments: ORDER_PAYMENT,
+            paymentStatus: PAYMENT_STATUS,
+            order_id: this.$route.params.order_id,
+            order: null,
+            orderRef: null,
+            orderDoc: null,
+            restaurant: null,
+            rider: null,
+            riderRef: null,
+            rider_marker: null,
+            google: null,
+            map: null,
+            message: ""
+        }
+    },
+    created() {
+        document.title = "Let's Bee | Order | " + this.order_id;
+
+        this.$store.commit("showLoader");
+        this.orderDoc = orderCollection.doc(this.order_id)
+        this.orderRef = this.orderDoc.onSnapshot((order) => {
+            if (!order.exists) {
+                alert("Not Found");
+                this.$router.replace({name: "Dashboard"});
+                return false;
             }
+
+            this.order = order.data();
+
+            if (this.restaurant == null && this.order.restaurant_id) {
+                restaurantCollection.doc(this.order.restaurant_id).get().then(
+                    (restaurant) => {
+                        if (!restaurant.exists) {
+                            alert("Invalid Restaurant");
+                            this.$router.replace({name: "Dashboard"});
+                        }
+
+                        this.restaurant = {id: restaurant.id, ...restaurant.data()};
+
+                        if (this.isLoadMap) {
+                            this.initializeMap();
+                            this.$store.commit("hideLoader");
+                        }
+                    } 
+                );
+            }
+
+            if (this.order.rider_id && this.rider == null) {
+                this.riderRef = riderCollection.doc(this.order.rider_id).onSnapshot((rider) => {
+                    this.rider = {id: rider.id, ...rider.data()}
+
+                    if (this.rider_marker) {
+                        if (this.rider_marker.getMap() == null) {
+                            this.rider_marker.setMap(this.map);
+                        }
+                        this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
+                    }
+                });
+            }
+        });
+    },
+    
+    async mounted() {
+        this.google =  await GoogleMapsApiLoader({
+            apiKey: GOOGLE.map.key
+        }).catch(err => {
+            console.log(err);
+            alert("Something went wrong on Google Map. Please try refreshing the page");
+            this.$store.commit("hideLoader");
+        });
+
+        this.isLoadMap = true;
+        if (this.restaurant != null) {
+            this.initializeMap();
+            this.$store.commit("hideLoader");
+        }
+    },
+    
+    methods: {
+        validateDateNum: function(n) { 
+            return (n < 10 ? '0' : '') + n; 
         },
-        created() {
-            document.title = "Let's Bee | Order | " + this.order_id;
+        formatFBtimestamp: function(timestamp) {
+            if (!timestamp) {
+                return "";
+            }
+            
+            var date = new Date(timestamp.toDate());
 
-            this.$store.commit("showLoader");
-            this.orderDoc = orderCollection.doc(this.order_id)
-            this.orderRef = this.orderDoc.onSnapshot((order) => {
-                if (!order.exists) {
-                    alert("Not Found");
-                    this.$router.replace({name: "Dashboard"});
-                    return false;
-                }
+            var hours = date.getHours();
+            var ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            
+            return MONTH[date.getMonth()] + ' ' + this.validateDateNum(date.getDate()) + ", " + date.getFullYear() + " " +
+                this.validateDateNum(hours) + ':' + this.validateDateNum(date.getMinutes()) + ' ' + ampm;
+        },
 
-                this.order = order.data();
+        initializeMap: function() {
+            this.map = new this.google.maps.Map(this.$refs.orderMap, {
+                center: { lat: 15.1450545, lng: 120.5894371},
+                zoom: 10,
+                streetViewControl: false,
+                mapTypeId: this.google.maps.MapTypeId.ROADMAP,
+                disableDefaultUI: true
+            });
 
-                if (this.restaurant == null && this.order.restaurant_id) {
-                    restaurantCollection.doc(this.order.restaurant_id).get().then(
-                        (restaurant) => {
-                            if (!restaurant.exists) {
-                                alert("Invalid Restaurant");
-                                this.$router.replace({name: "Dashboard"});
-                            }
+            var userMarker = new this.google.maps.Marker({
+                label: "You",
+                title: "You",
+                map: this.map,
+            });
+            var restaurantWindow = new this.google.maps.InfoWindow({
+                content: this.restaurant.name, 
+                position: {lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude}
+            });
+            restaurantWindow.open(this.map);
 
-                            this.restaurant = {id: restaurant.id, ...restaurant.data()};
-
-                            if (this.isLoadMap) {
-                                this.initializeMap();
-                                this.$store.commit("hideLoader");
-                            }
-                        } 
-                    );
-                }
-
-                if (this.order.rider_id && this.rider == null) {
-                    this.riderRef = riderCollection.doc(this.order.rider_id).onSnapshot((rider) => {
-                        this.rider = {id: rider.id, ...rider.data()}
-
-                        if (this.rider_marker) {
-                            if (this.rider_marker.getMap() == null) {
-                                this.rider_marker.setMap(this.map);
-                            }
+            this.rider_marker = new this.google.maps.Marker({
+                title: "Let's Bee Driver",
+                icon: 'http://localhost:8080/images/driver.png',
+                map: null
+            });
+            
+            var directionsRenderer = new this.google.maps.DirectionsRenderer({suppressMarkers: true});
+            directionsRenderer.setMap(this.map);
+            
+            new this.google.maps.DirectionsService().route(
+                {
+                    origin: { lat: this.order.customer_location.latitude, lng: this.order.customer_location.longitude },
+                    destination: { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude },
+                    travelMode: this.google.maps.TravelMode.DRIVING,
+                },
+                (response, status) => {
+                    if (status === "OK") {
+                        console.log(response);
+                        directionsRenderer.setDirections(response);
+                        var leg = response.routes[ 0 ].legs[ 0 ];
+                        userMarker.setPosition(leg.start_location);
+                        if (this.rider) {
+                            this.rider_marker.setMap(this.map);
                             this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
                         }
-                    });
-                }
-            });
-        },
-        
-        async mounted() {
-            this.google =  await GoogleMapsApiLoader({
-                apiKey: GOOGLE.map.key
-            }).catch(err => {
-                console.log(err);
-                alert("Something went wrong on Google Map. Please try refreshing the page");
-                this.$store.commit("hideLoader");
-            });
-
-            this.isLoadMap = true;
-            if (this.restaurant != null) {
-                this.initializeMap();
-                this.$store.commit("hideLoader");
-            }
-        },
-        
-        methods: {
-            validateDateNum: function(n) { 
-                return (n < 10 ? '0' : '') + n; 
-            },
-            formatFBtimestamp: function(timestamp) {
-                if (!timestamp) {
-                    return "";
-                }
-
-                var t = new Date(1970, 0, 1);
-                t.setSeconds(timestamp.seconds);
-
-                return this.validateDateNum(t.getDate()) + "/" + this.validateDateNum(t.getMonth() + 1) + "/" + t.getFullYear() + " " + 
-                    this.validateDateNum(t.getHours()) + ":" + this.validateDateNum(t.getMinutes()) + ":" + this.validateDateNum(t.getSeconds());
-            },
-
-            initializeMap: function() {
-                this.map = new this.google.maps.Map(this.$refs.orderMap, {
-                    center: { lat: 15.1450545, lng: 120.5894371},
-                    zoom: 10,
-                    streetViewControl: false,
-                    mapTypeId: this.google.maps.MapTypeId.ROADMAP,
-                    disableDefaultUI: true
-                });
-
-                var userMarker = new this.google.maps.Marker({
-                    label: "You",
-                    title: "You",
-                    map: this.map,
-                });
-                new this.google.maps.InfoWindow({
-                    content: this.restaurant.name, 
-                    position: {lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude}
-                }).open();
-
-                this.rider_marker = new this.google.maps.Marker({
-                    title: "Let's Bee Driver",
-                    icon: 'http://localhost:8080/images/driver.png',
-                    map: null
-                });
-                
-                var directionsRenderer = new this.google.maps.DirectionsRenderer({suppressMarkers: true});
-                directionsRenderer.setMap(this.map);
-                // console.log(this.order);
-                new this.google.maps.DirectionsService().route(
-                    {
-                        origin: { lat: this.order.customer_location.latitude, lng: this.order.customer_location.longitude },
-                        destination: { lat: this.restaurant.location.latitude, lng: this.restaurant.location.longitude },
-                        travelMode: this.google.maps.TravelMode.DRIVING,
-                    },
-                    (response, status) => {
-                        if (status === "OK") {
-                            directionsRenderer.setDirections(response);
-                            var leg = response.routes[ 0 ].legs[ 0 ];
-                            userMarker.setPosition(leg.start_location);
-                            if (this.rider) {
-                                this.rider_marker.setMap(this.map);
-                                this.rider_marker.setPosition({lat: this.rider.location.latitude, lng: this.rider.location.longitude});
-                            }
-                        } else {
-                            alert("Directions request failed due to " + status);
-                        }
+                    } else {
+                        alert("Directions request failed due to " + status);
                     }
-                );
-            },
-            sendMessage: function() {
-                
-                if (!this.message) {
-                    alert("Please fill up the message field before sending a message");
-                    return false;
                 }
-                this.orderDoc.update({
-                    chats: firebase.firestore.FieldValue.arrayUnion({
-                        created_at: firebase.firestore.Timestamp.fromDate(new Date()),
-                        message: this.message,
-                        user_id: this.order.user_id
-                    })
-                }).then((result) => {
-                    console.log(result);
-                    this.message = "";
-                })
-            }
+            );
         },
-    }
+        sendMessage: function() {
+            
+            if (!this.message) {
+                alert("Please fill up the message field before sending a message");
+                return false;
+            }
+            this.orderDoc.update({
+                chats: firebase.firestore.FieldValue.arrayUnion({
+                    created_at: firebase.firestore.Timestamp.fromDate(new Date()),
+                    message: this.message,
+                    user_id: this.order.user_id
+                })
+            }).then((result) => {
+                console.log(result);
+                this.message = "";
+            })
+        }
+    },
+}
 </script>

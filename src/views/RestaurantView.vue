@@ -137,6 +137,22 @@
         },
 
         methods: {
+
+            validateTransaction: function() {
+                if (this.order.total_price <= 0) { 
+                    return { status: false, message: "Please select Menu first"};
+                }
+
+                if (this.order.total_price < 100) { 
+                    return { status: false, message: "Please, the minimum transaction was ₱ 100"};
+                }
+
+                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
+                    return { status: false, message: "Please select your address first before ordering. (check the dropdown on the top right of the window)"};
+                }
+
+                return { status: true, message: "" };
+            },
            
            selectOrder: function(menu_name, menu_price) {
                 
@@ -175,13 +191,9 @@
             },
             
             orderByDelivery: function() {
-                if (this.order.total_price <= 0) { 
-                    alert("Please select Menu first");
-                    return false;
-                }
-
-                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
-                    alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
+                let validation = this.validateTransaction();
+                if (!validation.status) {
+                    alert(validation.message);
                     return false;
                 }
 
@@ -212,13 +224,9 @@
             },
 
             orderByGCash: function() {
-                if (this.order.total_price <= 0) { 
-                    alert("Please select Menu first");
-                    return false;
-                }
-
-                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
-                    alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
+                let validation = this.validateTransaction();
+                if (!validation.status) {
+                    alert(validation.message);
                     return false;
                 }
 
@@ -241,13 +249,9 @@
             },
 
             orderByPaypal: function() {
-                if (this.order.total_price <= 0) { 
-                    alert("Please select Menu first");
-                    return false;
-                }
-
-                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
-                    alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
+                let validation = this.validateTransaction();
+                if (!validation.status) {
+                    alert(validation.message);
                     return false;
                 }
 
@@ -270,13 +274,9 @@
             },
 
             orderByCard: function() {
-                if (this.order.total_price <= 0) { 
-                    alert("Please select Menu first");
-                    return false;
-                }
-
-                if (this.auth.location.latitude == 0 && this.auth.location.longitude == 0) {
-                    alert("Please select your address first before ordering. (check the dropdown on the top right of the window)");
+                let validation = this.validateTransaction();
+                if (!validation.status) {
+                    alert(validation.message);
                     return false;
                 }
 
@@ -323,21 +323,6 @@
                         details: payment_details
                     }
                 });
-                /* .then((result) => {
-                    if (!result.id) {
-
-                        alert("Something went wrong. (Placing order). Please try again");
-                        return false;
-                    }
-                    
-                    alert("Successfully ordered\n\nStatus: " + payment_status);
-
-                    this.sendNotification();
-                    this.$router.push("/orders/" + result.id);
-                }).catch((err) => {
-                    alert("Something went wrong. (Placing order). Please try again");
-                    console.log(err);
-                }); */
             },
 
             sendNotification: function() {
