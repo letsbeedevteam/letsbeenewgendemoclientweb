@@ -25,13 +25,13 @@
             <div class="login-as-google">
                 <button type="button" class="btn btn-lg btn-primary btn-block social-button-google" @click="signInWithGoogle" > 
                     <i class="fab fa-google"></i>
-                    <span>Login in With Google</span>
+                    <span>Login With Google</span>
                 </button>
             </div>
             <div class="login-as-facebook">
                 <button type="button" class="btn btn-lg btn-primary btn-block social-button-facebook" @click="signInWithFacebook" > 
                     <i class="fab fa-facebook"></i>
-                    <span>Login in With Facebook</span>
+                    <span>Login With Facebook</span>
                 </button>
             </div>
             
@@ -68,10 +68,8 @@ export default {
                     () => {
                         this.$router.replace({name: "Dashboard"});
                     },
-                    err => {
-                        alert(err);
-                    }
-                );
+                    (this.catchError)
+                ).catch(this.catchError);
         },
         signInWithGoogle: function() {
             var provider = new firebase.auth.GoogleAuthProvider();
@@ -89,11 +87,10 @@ export default {
                         }
                     });
                 },
-                (err) => {
-                    alert(err);
-                }
-            )
+                (this.catchError)
+            ).catch(this.catchError);
         },
+
         signInWithFacebook: function() {
             var provider = new firebase.auth.FacebookAuthProvider();
             provider.addScope('email');
@@ -101,25 +98,39 @@ export default {
             auth.signInWithPopup(provider).then(
                 (result) => {
 
-                    this.checkUser(result.user.uid).then((user_result) => {
-                        if (user_result.empty) {
-                            this.createUser(result.user.uid, result.user.displayName, "customer").then(users => {
-                                alert("Successfully logged in");
-                                this.$session.set('auid', users.id);
-                                this.$router.replace({name: "Dashboard"});
-                            })
-                        }
-                    });
+                    this.checkUser(result.user.uid).then(
+                        (user_result) => {
+                            if (user_result.empty) {
+                                this.createUser(result.user.uid, result.user.displayName, "customer").then(
+                                    (users) => {
+                                        alert("Successfully logged in");
+                                        this.$session.set('auid', users.id);
+                                        this.$router.replace({name: "Dashboard"});
+                                    },
+                                    (this.catchError)
+                                ).catch(this.catchError);
+                            }
+                        },
+                        (this.catchError)
+                    ).catch(this.catchError);
                     
                 },
-                (err) => {
-                    alert(err);
-                }
-            )
+                (this.catchError)
+            ).catch(this.catchError)
         },
+
+        catchError: function(err) {
+            console.log(err);
+            alert("Something went wrong");
+            if (err.response) {
+                console.log(err.response.data)
+            }
+        },
+
         checkUser: function(user_id) {
             return userCollection.where('uid', "==", user_id).get();
         },
+        
         createUser: function(user_id, name, type) {
             return userCollection.add({
                 uid: user_id,
@@ -127,7 +138,7 @@ export default {
                 type: type,
                 location: new firebase.firestore.GeoPoint(0, 0),
                 notification_token: null
-            })
+            });
         }
     },
     beforeDestroy() {

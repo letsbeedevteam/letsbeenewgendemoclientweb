@@ -185,27 +185,30 @@
                     return false;
                 }
 
-                orderCollection.where("user_id", "==", this.auth.id).where("status", "in", [1, 2, 4,]).get().then((result) => {
-                    if (!result.empty) {
-                        alert("Invalid Request. You're order still on proccess"); 
-                        return false;
-                    } 
-
-                    this.createOrder("cod", "pending", null).then((create_result) => {
-                        
-                        if (!create_result.id) {
-                            alert("Something went wrong. Please try again (Placing order)");
+                orderCollection.where("user_id", "==", this.auth.id).where("status", "in", [1, 2, 4,]).get().then(
+                    (result) => {
+                        if (!result.empty) {
+                            alert("Invalid Request. You're order still on proccess"); 
                             return false;
-                        }
+                        } 
 
-                        alert("Successfully ordered\n\nStatus: pending");
+                        this.createOrder("cod", "pending", null).then((create_result) => {
+                            
+                            if (!create_result.id) {
+                                alert("Something went wrong. Please try again (Placing order)");
+                                return false;
+                            }
 
-                        this.sendNotification();
-                        this.$router.push("/orders/" + create_result.id);
+                            alert("Successfully ordered\n\nStatus: pending");
 
-                    }, (this.catchError)).catch(this.catchError);
-                    
-                });
+                            this.sendNotification();
+                            this.$router.push("/orders/" + create_result.id);
+
+                        }, (this.catchError)).catch(this.catchError);
+                        
+                    }, 
+                    (this.catchError)
+                ).catch(this.catchError);
             },
 
             orderByGCash: function() {
