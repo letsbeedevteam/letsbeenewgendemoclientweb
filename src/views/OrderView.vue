@@ -8,75 +8,97 @@
         <div class="row" >
             <div class="col-8" v-if="order">
 
-                <h3>Ordered Menu</h3>
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td>{{ order.menu_orders.name }}</td>
-                            <td><span>&#8369;</span> {{ order.menu_orders.price }}</td>
-                        </tr>
-                        <tr>
-                            <td>Delivery Fee</td>
-                            <td><span>&#8369;</span> {{ order.delivery_fee }}</td>
-                        </tr>
-                        <tr>
-                            <td>Total</td>
-                            <td><span>&#8369;</span> {{ order.menu_orders.price + order.delivery_fee }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="box">
+                    <h3>Ordered Menu</h3>
+                    <table class="table table-nfbt mb-0">
+                        <tbody>
+                            <tr>
+                                <td>{{ order.menu_orders.name }}</td>
+                                <td><span>&#8369;</span> {{ order.menu_orders.price }}</td>
+                            </tr>
+                            <tr>
+                                <td>Delivery Fee</td>
+                                <td><span>&#8369;</span> {{ order.delivery_fee }}</td>
+                            </tr>
+                            <tr>
+                                <td>Total</td>
+                                <td><span>&#8369;</span> {{ order.menu_orders.price + order.delivery_fee }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <h3>Payment</h3>
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td>Payment Method</td>
-                            <td>{{ payments[order.payment.method] }}</td>
-                        </tr>
-                        <tr>
-                            <td>Status</td>
-                            <td>{{ paymentStatus[order.payment.status] }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div v-if="restaurant" class="box">
+                    <h3>Restaurant</h3>
+                    <table class="table table-nfbt mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Name</td>
+                                <td>{{ restaurant.name }}</td>
+                            </tr>
+                            <tr v-if="restaurant_address">
+                                <td>Address</td>
+                                <td>{{ restaurant_address }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <h3>Informations</h3>
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td>Ordered Time</td>
-                            <td>{{ formatFBtimestamp(order.ordered_time) }}</td>
-                        </tr>
-                        <tr>
-                            <td>Order status</td>
-                            <td>{{ statuss[order.status] }}</td>
-                        </tr>
-                        <tr v-if="order.reason">
-                            <td>Reason</td>
-                            <td>{{ order.reason }}</td>
-                        </tr>
-                        <tr v-if="order.restaurant_pick_time">
-                            <td>Restaurant Response Time</td>
-                            <td>{{ formatFBtimestamp(order.restaurant_pick_time) }}</td>
-                        </tr>
-                        <tr v-if="order.rider_pick_time">
-                            <td>Rider Response Time</td>
-                            <td>{{ formatFBtimestamp(order.restaurant_pick_time) }}</td>
-                        </tr>
-                        <tr v-if="order.rider_pick_up_time">
-                            <td>Rider Response Time</td>
-                            <td>{{ formatFBtimestamp(order.rider_pick_up_time) }}</td>
-                        </tr>
-                        <tr v-if="order.delivered_time">
-                            <td>Delivered Time</td>
-                            <td>{{ formatFBtimestamp(order.delivered_time) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="box">
+                    <h3>Payment</h3>
+                    <table class="table table-nfbt mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Payment Method</td>
+                                <td>{{ payments[order.payment.method] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Status</td>
+                                <td>{{ paymentStatus[order.payment.status] }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <div v-if="order.rider_id && rider">
+                <div class="box">
+                    <h3>Informations</h3>
+                    <table class="table table-nfbt mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Ordered Time</td>
+                                <td>{{ formatFBtimestamp(order.ordered_time) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Order status</td>
+                                <td>{{ statuss[order.status] }}</td>
+                            </tr>
+                            <tr v-if="order.reason">
+                                <td>Reason</td>
+                                <td>{{ order.reason }}</td>
+                            </tr>
+                            <tr v-if="order.restaurant_pick_time">
+                                <td>Restaurant Response Time</td>
+                                <td>{{ formatFBtimestamp(order.restaurant_pick_time) }}</td>
+                            </tr>
+                            <tr v-if="order.rider_pick_time">
+                                <td>Rider Response Time</td>
+                                <td>{{ formatFBtimestamp(order.rider_pick_time) }}</td>
+                            </tr>
+                            <tr v-if="order.rider_pick_up_time">
+                                <td>Rider Response Time</td>
+                                <td>{{ formatFBtimestamp(order.rider_pick_up_time) }}</td>
+                            </tr>
+                            <tr v-if="order.delivered_time">
+                                <td>Delivered Time</td>
+                                <td>{{ formatFBtimestamp(order.delivered_time) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="order.rider_id && rider" class="box">
                     <h3>Rider Info</h3>
-                    <table class="table">
+                    <table class="table table-nfbt mb-0">
                         <tbody>
                             <tr>
                                 <td>Name</td>
@@ -158,7 +180,8 @@ export default {
             rider_marker: null,
             google: null,
             map: null,
-            message: ""
+            restaurant_address: null,
+            message: "",
         }
     },
     created() {
@@ -284,6 +307,7 @@ export default {
                         console.log(response);
                         directionsRenderer.setDirections(response);
                         var leg = response.routes[ 0 ].legs[ 0 ];
+                        this.restaurant_address = leg.end_address;
                         userMarker.setPosition(leg.start_location);
                         if (this.rider) {
                             this.rider_marker.setMap(this.map);
