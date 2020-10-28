@@ -37,17 +37,7 @@
                 
                 let order = { id: result.id, ...result.data()};
 
-                this.sendNotification(order.restaurant_id, order.menu_orders.name).then(notify => {
-                    console.log(notify);
-                    this.$store.commit("hideLoader");
-                    this.loading = false;
-                });
-            });
-        },
-
-        methods: {
-            sendNotification: function(restaurant_id, menu_order_name) {
-                restaurantCollection.doc(restaurant_id).get().then(resto_result => {
+                restaurantCollection.doc(order.restaurant_id).get().then(resto_result => {
                     console.log("RestaurantResult", resto_result);
 
                     if (!resto_result.exists) {
@@ -56,31 +46,43 @@
                     }
 
                     let restaurant = { id: resto_result.id, ...resto_result.data()};
+
+                    this.sendNotification(restaurant, order.menu_orders.name).then(notify => {
+                        console.log(notify);
+                        this.$store.commit("hideLoader");
+                        this.loading = false;
+                    });
                     
-                    return axios.post(
-                        'https://fcm.googleapis.com/fcm/send', 
-                        {
-                            notification: {
-                                body: "New order",
-                                title: "There's new order " + menu_order_name
-                            },
-                            priority: "high",
-                            data: {
-                                restaurantId: restaurant_id,
-                                body: "New order",
-                                title: "There's new order " + menu_order_name
-                            },
-                            click_action: "FLUTTER_NOTIFICATION_CLICK",
-                            to: restaurant.notification_token
-                        },
-                        {
-                            headers: {
-                                "Content-Type": "application/json",
-                                'Authorization': "key=" + FIREBASE.cloudMessaging.serverKey,
-                            }
-                        }
-                    );
                 });
+
+            });
+        },
+
+        methods: {
+            sendNotification: function(restaurant, menu_order_name) {
+                return axios.post(
+                    'https://fcm.googleapis.com/fcm/send', 
+                    {
+                        notification: {
+                            body: "New order",
+                            title: "There's new order " + menu_order_name
+                        },
+                        priority: "high",
+                        data: {
+                            restaurantId: restaurant.id,
+                            body: "New order",
+                            title: "There's new order " + menu_order_name
+                        },
+                        click_action: "FLUTTER_NOTIFICATION_CLICK",
+                        to: restaurant.notification_token
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            'Authorization': "key=" + FIREBASE.cloudMessaging.serverKey,
+                        }
+                    }
+                );
             },
 
             catchError: function(err) {
