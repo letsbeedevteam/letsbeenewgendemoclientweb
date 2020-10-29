@@ -20,6 +20,7 @@ import GCashFailedPayment from '../views/GCashFailedPayment.vue'
 import PaymentSuccess from '../views/PaymentSuccess.vue'
 import CardCreatePayment from '../views/CardCreatePayment.vue'
 import CardSuccessPayment from '../views/CardSuccessPayment.vue'
+import CardFailedPayment from '../views/CardFailedPayment.vue'
 
 import { auth } from '../firebase-config'
 
@@ -144,6 +145,11 @@ const routes = [
     path: "/payment/card/success",
     name: "CardSuccessPayment",
     component: CardSuccessPayment,
+  },
+  {
+    path: "/payment/card/failed",
+    name: "CardFailedPayment",
+    component: CardFailedPayment,
   },
   {
     path: "/payment/success",

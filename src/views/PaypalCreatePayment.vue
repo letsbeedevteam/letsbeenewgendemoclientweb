@@ -14,29 +14,29 @@
         data() {
             return {
                 order_id: this.$route.params.order_id,
-                is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false
+                is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false,
+                mobileQuery: this.is_mobile ? "&mobile=true" : ""
             }
         },
+
         created() {
             
             var orderRef = orderCollection.doc(this.order_id);
             orderRef.get().then((result) => {
                 if (!result.exists) {
                     alert("This payment is invalid");
-                    window.close();
+                    window.location = NETWORK_URL + "/payment/success";
                 }
                 
                 let order = { id: result.id, ...result.data()};
 
                 if (order.payment.method != "paypal") { 
                     alert("This Payment is not paypal");
-                    window.close();
-                    return false;
+                    window.location = NETWORK_URL + "/payment/success";
                 }
                 if (order.payment.status != "pending") {
                     alert("This payment is already processed");
-                    window.close();
-                    return false;
+                    window.location = NETWORK_URL + "/payment/success";
                 }
 
                 this.getPaypalToken().then((token) => {
@@ -52,11 +52,11 @@
                             alert("Successfully create a paypal payment");
                             window.location = "https://www.sandbox.paypal.com/checkoutnow?token=" + order_result.data.id;
 
-                        }, (this.catchError)).catch(this.catchError);
+                        }).catch(this.catchFirebase); // update order
 
-                    }, (this.catchError)).catch(this.catchError);
+                    }).catch(this.catchPaypal); // create order payment
 
-                }, (this.catchError)).catch(this.catchError);
+                }).catch(this.catchPaypal); // get token
 
             });
         },
@@ -80,7 +80,6 @@
                 );
             },
             createOrder: function(access_token, order_id, total_price) {
-                var mobileQuery = this.is_mobile ? "&mobile=true" : "";
                 return axios.post(
                     "https://api.sandbox.paypal.com/v2/checkout/orders",
                     {
@@ -95,8 +94,8 @@
                         ],
                         application_context: {
                             brand_name: "Let's Bee",
-                            return_url: NETWORK_URL + "/payment/paypal/return?order_id=" + order_id + mobileQuery,
-                            cancel_url: NETWORK_URL + "/payment/paypal/cancel?order_id=" + order_id + mobileQuery,
+                            return_url: NETWORK_URL + "/payment/paypal/return?order_id=" + order_id + this.mobileQuery,
+                            cancel_url: NETWORK_URL + "/payment/paypal/cancel?order_id=" + order_id + this.mobileQuery,
                         }
                     },
                     {
@@ -120,13 +119,18 @@
                 });
             },
 
-            catchError: function(err) {
+            catchPaypal: function(err) {
                 console.log(err);
-                alert("Something went wrong");
-                if (err.response) {
-                    console.log(err.response.data)
-                }
+                alert("Something went wrong. Failed to create Paypal payment");
+                window.location = NETWORK_URL + "/payment/paypal/cancel?order_id=" + this.order_id + this.mobileQuery;
             },
+
+            catchFirebase: function(err) {
+                console.log(err);
+                alert("Something went wrong. Failed to load google firebase");
+                window.location = NETWORK_URL + "/payment/paypal/cancel?order_id=" + this.order_id + this.mobileQuery;
+            },
+
         }
     }
 </script>

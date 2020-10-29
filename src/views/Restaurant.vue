@@ -30,14 +30,20 @@
             document.title = "Let's Bee | Restaurant List";
 
             this.$store.commit("showLoader");
-            restaurantCollection.get().then(
-                (result) => {
-                    this.restaurants = result.docs.map(doc => {
-                        return { id: doc.id, ...doc.data() }
-                    });
-                    this.$store.commit("hideLoader");
+            restaurantCollection.get().then((result) => {
+                this.restaurants = result.docs.map(doc => {
+                    return { id: doc.id, ...doc.data() }
+                });
+                this.$store.commit("hideLoader");
+
+            }).catch((err) => {
+                console.log(err);
+                alert("Something went wrong. Failed to load the restaurant lists");
+                if (err.response) {
+                    console.log(err.response.data)
                 }
-            )
+            });
+            
         },
 
         beforeDestroy() {

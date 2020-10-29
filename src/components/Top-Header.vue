@@ -103,7 +103,6 @@ export default {
                 
                 let user_id = users_data[0].id;
                 this.auth_name = users_data[0].name;
-                console.log(user_id);
 
                 if (!this.$session.exists("auid") || this.$session.get("auid") === undefined) {
                     this.$session.set('auid', user_id);
@@ -129,6 +128,7 @@ export default {
 
                 }).catch((err) => {
                     console.log('An error occurred while retrieving token. ', err);
+                    alert("Notification is disabled");
                 });
 
                 messaging.onMessage((payload) => {
@@ -138,28 +138,26 @@ export default {
                         type: payload.data.type,
                         title: payload.notification.title,
                         body: payload.notification.body,
-                        status: true,    
+                        status: true,
                     });
                     this.newNotification = true;
                 });
-            });
+
+            }).catch(this.catchError); // get user
 
         });
     },
     methods: {
-        SignOut: function() {
-            auth.signOut().then(
-                () => {
-                    console.log("successfully logged out");
-                    this.$session.clear();
 
-                    this.$router.replace({name: "Login"});
-                },
-                err => {
-                    console.log(err);
-                }
-            )
+        SignOut: function() {
+            auth.signOut().then(() => {
+                console.log("successfully logged out");
+                this.$session.clear();
+
+                this.$router.replace({name: "Login"});
+            }).catch(this.catchError);
         },
+
         validateNotifications: function() {
             let status = false;
             this.notifications.forEach((notification) => {
@@ -169,8 +167,8 @@ export default {
                 }
             });
             this.newNotification = status;
-
         },
+
         openNotification: function(notification_id) {
             this.notifications.forEach((notification) => {
                 if (notification.id == notification_id) {
@@ -181,6 +179,14 @@ export default {
                     }
                 }
             });
+        },
+
+        catchError: function(err) {
+            console.log(err);
+            alert("Something went wrong");
+            if (err.response) {
+                console.log(err.response.data)
+            }
         },
         
     },

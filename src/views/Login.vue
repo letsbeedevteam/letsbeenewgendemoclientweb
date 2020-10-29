@@ -62,69 +62,70 @@ export default {
         this.$session.start();
     },
     methods: {
+
         login: function() {
-            auth.signInWithEmailAndPassword(this.email, this.password)
-                .then(
-                    () => {
-                        this.$router.replace({name: "Dashboard"});
-                    },
-                    (this.catchError)
-                ).catch(this.catchError);
+            auth.signInWithEmailAndPassword(this.email, this.password).then(() => {
+                this.$router.push({name: "Dashboard"});
+
+            }).catch(this.catchAuth);
         },
+
         signInWithGoogle: function() {
             var provider = new firebase.auth.GoogleAuthProvider();
 
-            auth.signInWithPopup(provider).then(
-                (result) => {
+            auth.signInWithPopup(provider).then((result) => {
                     
-                    this.checkUser(result.user.uid).then((user_result) => {
-                        if (user_result.empty) {
-                            this.createUser(result.user.uid, result.user.displayName, "customer").then(users => {
-                                alert("Successfully logged in");
-                                this.$session.set('auid', users.id);
-                                this.$router.replace({name: "Dashboard"});
-                            })
-                        }
-                    });
-                },
-                (this.catchError)
-            ).catch(this.catchError);
+                this.checkUser(result.user.uid).then((user_result) => {
+                    if (user_result.empty) {
+                        
+                        this.createUser(result.user.uid, result.user.displayName, "customer").then(users => {
+                            alert("Successfully logged in");
+                            this.$session.set('auid', users.id);
+
+                            this.$router.push({name: "Dashboard"});
+                        }).catch(this.catchFirebase);
+
+                    } else {
+                        this.$router.push({name: "Dashboard"});
+                    }
+                }).catch(this.catchFirebase);
+
+            }).catch(this.catchAuth);
         },
 
         signInWithFacebook: function() {
             var provider = new firebase.auth.FacebookAuthProvider();
             provider.addScope('email');
 
-            auth.signInWithPopup(provider).then(
-                (result) => {
+            auth.signInWithPopup(provider).then((result) => {
 
-                    this.checkUser(result.user.uid).then(
-                        (user_result) => {
-                            if (user_result.empty) {
-                                this.createUser(result.user.uid, result.user.displayName, "customer").then(
-                                    (users) => {
-                                        alert("Successfully logged in");
-                                        this.$session.set('auid', users.id);
-                                        this.$router.replace({name: "Dashboard"});
-                                    },
-                                    (this.catchError)
-                                ).catch(this.catchError);
-                            }
-                        },
-                        (this.catchError)
-                    ).catch(this.catchError);
-                    
-                },
-                (this.catchError)
-            ).catch(this.catchError)
+                this.checkUser(result.user.uid).then((user_result) => {
+                    if (user_result.empty) {
+                        
+                        this.createUser(result.user.uid, result.user.displayName, "customer").then((users) => {
+                            alert("Successfully logged in");
+                            this.$session.set('auid', users.id);
+                            this.$router.push({name: "Dashboard"});
+
+                        }).catch(this.catchFirebase);
+
+                    } else {
+                        this.$router.push({name: "Dashboard"});
+                    }
+
+                }).catch(this.catchFirebase);
+                
+            }).catch(this.catchAuth);
         },
 
-        catchError: function(err) {
+        catchAuth: function(err) {
             console.log(err);
-            alert("Something went wrong");
-            if (err.response) {
-                console.log(err.response.data)
-            }
+            alert("Something went wrong. (" + err.message + ")");
+        },
+
+        catchFirebase: function(err) {
+            console.log(err);
+            alert("Something went wrong. Failed to connect to google firebase");
         },
 
         checkUser: function(user_id) {

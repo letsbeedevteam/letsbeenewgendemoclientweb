@@ -12,22 +12,75 @@
 </template>
 
 <script>
-    import { orderCollection } from '../firebase-config'
+    import { orderCollection, restaurantCollection } from '../firebase-config'
+    import { NETWORK_URL } from '../config'
 
     export default {
         data() {
             return {
                 order_id: this.$route.params.order_id,
+                is_mobile: this.$route.params.mobile && this.$route.params.mobile == "true" ? true : false,
                 processing: true
             }
         },
         created() {
-            var del = orderCollection.doc(this.order_id).delete();
-            console.log(del);
-            del.then((result) => {
-                console.log(result);
-                this.processing = false;
-            })
-        }
+            var orderRef = orderCollection.doc(this.order_id);
+            
+            if (this.is_mobile) {
+
+                orderRef.delete().then(() => {
+                    this.processing = false;
+                    window.location = NETWORK_URL + "/payment/success";
+                }).catch(this.catchFirebase);
+
+            } else {
+
+                orderRef.get().then((result) => {
+                    if (!result.exists) {
+                        alert("Order not found");
+                        this.$route.push("/dashboard");
+                    }
+
+                    let order = { id: result.id, ...result.data()};
+
+                    orderRef.delete().then(() => {
+                        
+                        restaurantCollection.doc(order.restaurant_id).get().then((restaurant_result) => {
+                            if (!restaurant_result.exists) {
+                                alert("Restaurant not found. You're now redirecting to dashboard");
+                                this.$route.push("/dashboard");
+                            }
+    
+                            let restaurant = { id: restaurant_result.id, ...restaurant_result.data() };
+                            this.processing = false;
+
+                            this.$route.push({name: "RestaurantView", params: { restaurant_id: restaurant.id }});
+                        }).catch((err) => {
+                            console.log(err);
+                            this.processing = false;
+                            alert("Something went wrong. Failed to load google firebase. \nbut you've successfull cancel the payment.");
+
+                            this.$route.push("/dashboard");
+                        }); // get restaurant
+
+                    }).catch(this.catchFirebase); // delete order
+
+                }).catch(this.catchFirebase); // get order
+            }
+        },
+
+        methods: {
+
+            catchFirebase: function(err) {
+                console.log(err);
+                alert("Something went wrong. Failed to load google firebase");
+                if (this.is_mobile) {
+                    window.location = NETWORK_URL + "/payment/success";
+                } else {
+                    this.$route.push("/dashboard");
+                }
+            },
+
+        },
     }
 </script>

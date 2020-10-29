@@ -91,314 +91,326 @@
 </template>
 
 <script>
-    import axios from 'axios'
+import axios from 'axios'
 
-    import { orderCollection } from '../firebase-config'
-    import { PAYMONGO } from '../config'
+import { orderCollection } from '../firebase-config'
+import { PAYMONGO, NETWORK_URL } from '../config'
 
-    export default {
-        data() {
-            return {
-                order_id: this.$route.params.order_id,
-                mobileQuery: this.$route.query.mobile && this.$route.query.mobile == "true" ? "&mobile=true" : "",
-                paymentIntentID: null,
-                clientKey: null,
-                details: {
-                    card_number: null,
-                    exp_month: null,
-                    exp_year: null,
-                    cvc: null,
-                },
-                billing: {
-                    name: null,
-                    email: null,
-                    phone: null,
-                },
-                active: false,
-                show: false
+export default {
+    data() {
+        return {
+            order_id: this.$route.params.order_id,
+            mobileQuery: this.$route.query.mobile && this.$route.query.mobile == "true" ? "&mobile=true" : "",
+            paymentIntentID: null,
+            clientKey: null,
+            details: {
+                card_number: null,
+                exp_month: null,
+                exp_year: null,
+                cvc: null,
+            },
+            billing: {
+                name: null,
+                email: null,
+                phone: null,
+            },
+            active: false,
+            show: false
+        }
+    },
+
+    created() {
+        this.$store.commit("showLoader");
+
+        orderCollection.doc(this.order_id).get().then((result) => {
+            if (!result.exists) {
+                alert("This payment is invalid");
+                window.close();
             }
-        },
+            
+            let order = { id: result.id, ...result.data()};
 
-        created() {
-            this.$store.commit("showLoader");
+            if (order.payment.method != "card") { 
+                alert("This Payment is not Card Payment");
+                window.close();
+                return false;
+            }
+            if (order.payment.status != "pending") {
+                alert("This payment is already processed");
+                window.close();
+                return false;
+            }
 
-            orderCollection.doc(this.order_id).get().then((result) => {
-                if (!result.exists) {
-                    alert("This payment is invalid");
-                    window.close();
-                }
-                
-                let order = { id: result.id, ...result.data()};
+            var total_price = order.menu_orders.price + order.delivery_fee;
+            this.createPaymentIntent(total_price, order.menu_orders.name).then((intent_result) => {
+                console.log(intent_result);
 
-                if (order.payment.method != "card") { 
-                    alert("This Payment is not Card Payment");
-                    window.close();
-                    return false;
-                }
-                if (order.payment.status != "pending") {
-                    alert("This payment is already processed");
-                    window.close();
-                    return false;
-                }
+                this.paymentIntentID = intent_result.data.data.id;
+                this.clientKey = intent_result.data.data.attributes.client_key;
 
-                var total_price = order.menu_orders.price + order.delivery_fee;
-                this.createPaymentIntent(total_price, order.menu_orders.name).then((intent_result) => {
-                    console.log(intent_result);
+                this.$store.commit("hideLoader");
+            }).catch(this.catchPaymongo);
 
-                    this.paymentIntentID = intent_result.data.data.id;
-                    this.clientKey = intent_result.data.data.attributes.client_key;
+        }).catch(this.catchFirebase);
 
-                    this.$store.commit("hideLoader");
-                }, (this.catchError)).catch(this.catchError);
+    },
 
-            }).catch(this.catchError);
+    methods: {
 
-        },
-
-        methods: {
-
-            createPaymentIntent: function(amount, order_name) {
-                return axios.post(
-                    "https://api.paymongo.com/v1/payment_intents",
-                    {
-                        data: {
-                            attributes: {
-                                amount: parseInt(amount + "00"),
-                                payment_method_allowed: ["card"],
-                                payment_method_options: {
-                                    card: {
-                                        request_three_d_secure: "any"
-                                    }
-                                },
-                                description: "Ordered " + order_name,
-                                currency: "PHP"
-                            }
-                        }
-                    },
-                    {
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        auth: {
-                            username: PAYMONGO.secretKey,
-                            password: PAYMONGO.secretKey
+        createPaymentIntent: function(amount, order_name) {
+            return axios.post(
+                "https://api.paymongo.com/v1/payment_intents",
+                {
+                    data: {
+                        attributes: {
+                            amount: parseInt(amount + "00"),
+                            payment_method_allowed: ["card"],
+                            payment_method_options: {
+                                card: {
+                                    request_three_d_secure: "any"
+                                }
+                            },
+                            description: "Ordered " + order_name,
+                            currency: "PHP"
                         }
                     }
-                );
-            },
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    auth: {
+                        username: PAYMONGO.secretKey,
+                        password: PAYMONGO.secretKey
+                    }
+                }
+            );
+        },
 
-            submitPayment: function() {
-                this.$store.commit("showLoader");
+        submitPayment: function() {
+            this.$store.commit("showLoader");
 
-                this.createPaymentMethod().then((method_result) => {
-                    console.log(method_result);
+            this.createPaymentMethod().then((method_result) => {
+                console.log(method_result);
 
-                    this.attachPayment(method_result.data.data.id).then((attach_result) => {
-                        // console.log(attach_result);
-                        var paymentIntent = attach_result.data.data;
-                        var paymentIntentStatus = paymentIntent.attributes.status;
-                        
-                        if (paymentIntentStatus === 'awaiting_next_action') {
+                this.attachPayment(method_result.data.data.id).then((attach_result) => {
+                    // console.log(attach_result);
+                    var paymentIntent = attach_result.data.data;
+                    var paymentIntentStatus = paymentIntent.attributes.status;
+                    
+                    if (paymentIntentStatus === 'awaiting_next_action') {
 
-                            // window.location = paymentIntent.attributes.next_action.redirect.url;
-                            document.querySelector(".form-signin").style.display = "none";
+                        document.querySelector(".form-signin").style.display = "none";
 
-                            var modalBody = document.querySelector(".modal-body");
-                            var frame = document.createElement("iframe");
-                            frame.setAttribute("src", paymentIntent.attributes.next_action.redirect.url);
-                            frame.setAttribute("id", "threeDs-auth-frame");
-                            modalBody.appendChild(frame);
-                            frame.onload = () => {
-                                this.$store.commit("hideLoader");
+                        var modalBody = document.querySelector(".modal-body");
+                        var frame = document.createElement("iframe");
+                        frame.setAttribute("src", paymentIntent.attributes.next_action.redirect.url);
+                        frame.setAttribute("id", "threeDs-auth-frame");
+                        modalBody.appendChild(frame);
+                        frame.onload = () => {
+                            this.$store.commit("hideLoader");
+                        }
+
+                        this.toggleModal();
+
+                        window.addEventListener('message', (ev) => {
+                            
+                            if (ev.data != '3DS-authentication-complete') {
+                                alert("Something went wrong. OTP authentication.");
                             }
 
                             this.toggleModal();
+                            this.$store.commit("showLoader");
 
-                            window.addEventListener('message', (ev) => {
-                                console.log(ev);
-                                
-                                if (ev.data != '3DS-authentication-complete') {
-                                    alert("Something went wrong");
-                                }
-                                this.toggleModal();
-                                this.$store.commit("showLoader");
+                            this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                                console.log(pi_result);
 
-                                this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
-                                    console.log(pi_result);
+                                this.validateStatus(pi_result);
+                            }).catch(this.catchPaymongo);
+                        });
 
-                                    this.validateStatus(pi_result);
-                                });
-                            });
+                    } else if (paymentIntentStatus === 'succeeded') {
+                        
+                        this.updateOrder(paymentIntent.id, paymentIntent.attributes.client_key).then((update_result) => {
+                            this.$store.commit("hideLoader");
+                            console.log(update_result);
 
-                        } else if (paymentIntentStatus === 'succeeded') {
-                            
-                            this.updateOrder(paymentIntent.id, paymentIntent.attributes.client_key).then((update_result) => {
-                                this.$store.commit("hideLoader");
-                                console.log(update_result);
+                            window.location = "/payment/card/success?order_id=" + this.order_id + this.mobileQuery; 
+                        }).catch(this.catchFirebase);
 
-                                window.location = "/payment/card/success?order_id=" + this.order_id + this.mobileQuery; 
-                            });
+                    } else if(paymentIntentStatus === 'awaiting_payment_method') {
+                        alert(paymentIntent.attributes.last_payment_error);
+                    }  else if (paymentIntentStatus === 'processing'){
+                        setTimeout(function () {
+                            this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                                console.log(pi_result)
 
-                        } else if(paymentIntentStatus === 'awaiting_payment_method') {
-                            alert(paymentIntent.attributes.last_payment_error);
-                        }  else if (paymentIntentStatus === 'processing'){
-                            setTimeout(function () {
-                                this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
-                                    console.log(pi_result)
+                                this.validateStatus(pi_result);
+                            }).catch(this.catchPaymongo);
+                        }, 2000);
+                    }
 
-                                    this.validateStatus(pi_result);
-                                });
-                            }, 2000);
-                        }
-
-
-                    }).catch(this.catchError);
 
                 }).catch(this.catchError);
-            },
 
-            createPaymentMethod: function() {
-                return axios.post(
-                    "https://api.paymongo.com/v1/payment_methods",
-                    {
-                        data: {
-                            attributes: {
-                                details: {
-                                    card_number: this.details.card_number,
-                                    exp_month: parseInt(this.details.exp_month),
-                                    exp_year: parseInt(this.details.exp_year),
-                                    cvc: this.details.cvc
-                                },
-                                billing: this.billing,
-                                type: "card"
-                            }
+            }).catch(this.catchPaymongo);
+        },
+
+        createPaymentMethod: function() {
+            return axios.post(
+                "https://api.paymongo.com/v1/payment_methods",
+                {
+                    data: {
+                        attributes: {
+                            details: {
+                                card_number: this.details.card_number,
+                                exp_month: parseInt(this.details.exp_month),
+                                exp_year: parseInt(this.details.exp_year),
+                                cvc: this.details.cvc
+                            },
+                            billing: this.billing,
+                            type: "card"
                         }
+                    }
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
                     },
-                    {
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        auth: {
-                            username: PAYMONGO.secretKey,
-                            password: PAYMONGO.secretKey
+                    auth: {
+                        username: PAYMONGO.secretKey,
+                        password: PAYMONGO.secretKey
+                    }
+                }
+            );
+        },
+
+        attachPayment: function(paymentMethodID) {
+            return axios.post(
+                "https://api.paymongo.com/v1/payment_intents/" + this.paymentIntentID + "/attach",
+                {
+                    "data": {
+                    "attributes": {
+                        "client_key": this.clientKey,
+                        "payment_method": paymentMethodID
                         }
                     }
-                );
-            },
-
-            attachPayment: function(paymentMethodID) {
-                return axios.post(
-                    "https://api.paymongo.com/v1/payment_intents/" + this.paymentIntentID + "/attach",
-                    {
-                        "data": {
-                        "attributes": {
-                            "client_key": this.clientKey,
-                            "payment_method": paymentMethodID
-                            }
-                        }
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
                     },
-                    {
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        auth: {
-                            username: PAYMONGO.secretKey,
-                            password: PAYMONGO.secretKey
-                        }
+                    auth: {
+                        username: PAYMONGO.secretKey,
+                        password: PAYMONGO.secretKey
                     }
-                )
-            },
-
-            updateOrder: function(paymentIntentID, clientKey) {
-                return orderCollection.doc(this.order_id).update({
-                    payment: {
-                        method: "card",
-                        status: "paid",
-                        details: {
-                            orderID: paymentIntentID,
-                            clientKey: clientKey
-                        }
-                    }
-                })
-            },
-
-            getPaymentIntent: function(paymentIntentID, clientKey) {
-                
-                return axios.get(
-                    'https://api.paymongo.com/v1/payment_intents/' + paymentIntentID + '?client_key=' + clientKey,
-                    {
-                        auth: {
-                            username: PAYMONGO.secretKey,
-                            password: PAYMONGO.secretKey
-                        }
-                    }
-                )
-            },
-
-            validateStatus: function(result) {
-                var paymentIntent = result.data.data;
-                var paymentIntentStatus = paymentIntent.attributes.status;
-
-                if (paymentIntentStatus === 'succeeded') {
-                    this.updateOrder(paymentIntent.id, paymentIntent.attributes.client_key).then((update_result) => {
-                        this.$store.commit("hideLoader");
-                        console.log(update_result);
-
-                        window.location = "/payment/card/success?order_id=" + this.order_id + this.mobileQuery; 
-                    });
-                } else if(paymentIntentStatus === 'awaiting_payment_method') {
-                    alert(paymentIntent.attributes.last_payment_error);
-                } else if (paymentIntentStatus === 'processing'){
-                    this.$store.commit("showLoader");
-                    setTimeout(function () {
-                        this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
-                            console.log(pi_result)
-
-                            this.validateStatus(pi_result);
-                        });
-                    }, 2000);
                 }
-            },
+            )
+        },
 
-            isNumber: function(evt) {
-                evt = (evt) ? evt : window.event;
-                var charCode = (evt.which) ? evt.which : evt.keyCode;
-                if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
+        updateOrder: function(paymentIntentID, clientKey) {
+            return orderCollection.doc(this.order_id).update({
+                payment: {
+                    method: "card",
+                    status: "paid",
+                    details: {
+                        orderID: paymentIntentID,
+                        clientKey: clientKey
+                    }
+                }
+            })
+        },
+
+        getPaymentIntent: function(paymentIntentID, clientKey) {
+            
+            return axios.get(
+                'https://api.paymongo.com/v1/payment_intents/' + paymentIntentID + '?client_key=' + clientKey,
+                {
+                    auth: {
+                        username: PAYMONGO.secretKey,
+                        password: PAYMONGO.secretKey
+                    }
+                }
+            )
+        },
+
+        validateStatus: function(result) {
+            var paymentIntent = result.data.data;
+            var paymentIntentStatus = paymentIntent.attributes.status;
+
+            if (paymentIntentStatus === 'succeeded') {
+                this.updateOrder(paymentIntent.id, paymentIntent.attributes.client_key).then((update_result) => {
+                    this.$store.commit("hideLoader");
+                    console.log(update_result);
+
+                    window.location = "/payment/card/success?order_id=" + this.order_id + this.mobileQuery; 
+                }).catch(this.catchFirebase);
+
+            } else if(paymentIntentStatus === 'awaiting_payment_method') {
+                alert(paymentIntent.attributes.last_payment_error);
+            } else if (paymentIntentStatus === 'processing'){
+                this.$store.commit("showLoader");
+                setTimeout(function () {
+                    this.getPaymentIntent(paymentIntent.id, paymentIntent.attributes.client_key).then((pi_result) => {
+                        console.log(pi_result)
+
+                        this.validateStatus(pi_result);
+                    }).catch(this.catchFirebase);
+                }, 4000);
+            }
+        },
+
+        isNumber: function(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
+                evt.preventDefault();
+            } else {
+                return true;
+            }
+        },
+
+        checkCVC: function(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
+                evt.preventDefault();
+            } else {
+                if (this.details.cvc && this.details.cvc.toString().length > 2) {
                     evt.preventDefault();
-                } else {
-                    return true;
                 }
-            },
+                return true;
+            }
+        },
 
-            checkCVC: function(evt) {
-                evt = (evt) ? evt : window.event;
-                var charCode = (evt.which) ? evt.which : evt.keyCode;
-                if ((charCode > 31 && (charCode < 48 || charCode > 57)) && charCode !== 46) {
-                    evt.preventDefault();
-                } else {
-                    if (this.details.cvc && this.details.cvc.toString().length > 2) {
-                        evt.preventDefault();
-                    }
-                    return true;
-                }
-            },
+        toggleModal: function() {
+            var body = document.querySelector("body");
+            this.active = !this.active;
+            this.active
+                ? body.classList.add("modal-open")
+                : body.classList.remove("modal-open");
+            setTimeout(() => (this.show = !this.show), 10);
+        },
 
-            toggleModal: function() {
-                var body = document.querySelector("body");
-                this.active = !this.active;
-                this.active
-                    ? body.classList.add("modal-open")
-                    : body.classList.remove("modal-open");
-                setTimeout(() => (this.show = !this.show), 10);
-            },
+        /* catchError: function(err) {
+            console.log(err);
+            alert("Something went wrong");
+            if (err.response) {
+                console.log(err.response.data)
+            }
+        }, */
 
-            catchError: function(err) {
-                console.log(err);
-                alert("Something went wrong");
-                if (err.response) {
-                    console.log(err.response.data)
-                }
-            },
-        }
+        catchPaymongo: function(err) {
+            console.log(err);
+            alert("Something went wrong. Failed to load paymongo.");
+            window.location = NETWORK_URL + "/payment/card/failed?order_id=" + this.order_id + this.mobileQuery;
+        },
+
+        catchFirebase: function(err) {
+            console.log(err);
+            alert("Something went wrong. Failed to load google firebase");
+            window.location = NETWORK_URL + "/payment/card/failed?order_id=" + this.order_id + this.mobileQuery;
+        },
     }
+}
 </script>

@@ -46,32 +46,33 @@
         },
         methods: {
             register: function() {
-                auth.createUserWithEmailAndPassword(this.email, this.password).then(
-                    (auth) => {
-                        userCollection.where('uid', "==", auth.user.uid).get().then(
-                            (result) => {
-                                if (result.empty) {
-                                    userCollection.add({
-                                        uid: auth.user.uid,
-                                        name: this.name,
-                                        type: "customer",
-                                        location: new firebase.firestore.GeoPoint(0, 0),
-                                        notification_token: null
-                                    }).then(() => {
-                                        alert("Successfully Registered");
-                                        this.$router.replace({name: "Dashboard"});
-                                    }).catch((error) => {
-                                        alert("Something went wrong, please contact us. - " + error);
-                                    });
-                                }
-                            }
-                        );
-                    },
-                    err => {
-                        alert(err);
-                    }
-                );
+                auth.createUserWithEmailAndPassword(this.email, this.password).then((auth) => {
+
+                    userCollection.where('uid', "==", auth.user.uid).get().then((result) => {
+                        if (!result.empty) {
+                            return false;
+                        }
+                        userCollection.add({
+                            uid: auth.user.uid,
+                            name: this.name,
+                            type: "customer",
+                            location: new firebase.firestore.GeoPoint(0, 0),
+                            notification_token: null
+                        }).then(() => {
+                            alert("Successfully Registered");
+                            this.$router.replace({name: "Dashboard"});
+                            
+                        }).catch(this.catchFirebase); // create user
+
+                    }).catch(this.catchFirebase); // get user
+
+                }).catch(this.catchFirebase); // authenticate user
             },
+
+            catchFirebase: function(err) {
+                console.log(err);
+                alert("Something went wrong. Failed to load google firebase");
+            }
         },
         beforeDestroy() {
             this.name =  "";
