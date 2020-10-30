@@ -116,7 +116,7 @@
                     </table>
                 </div>
 
-                <div class="card bg-light mb-3 w-100" v-if="order.rider_id && rider && Object.keys(rider).length > 0">
+                <div class="card bg-light mb-3 w-100" v-if="order.rider_id && rider && Object.keys(rider).length > 0 && order.status != 7">
                     <div class="card-header">Chats</div>
                     <div class="card-body chat-box">
                         <div class="chat-messages">

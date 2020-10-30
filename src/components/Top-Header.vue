@@ -71,6 +71,15 @@
                 </ul>
             </div>
         </nav>
+
+        <div class="loader" :class="isLoader"></div>
+
+        <div v-if="is_notify" class="notification-alert">
+            <div class="na-body">
+                Click the exclamation point to give permission to send you desktop notifications.
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -80,6 +89,7 @@ import { db, auth, messaging } from "../firebase-config"
 export default {
     data() {
         return {
+            is_notify: false,
             loggedIn: false,
             auth_name: "",
             newNotification: false,
@@ -87,6 +97,13 @@ export default {
             notifications: []
         };
     },
+
+    computed: {
+        isLoader: function() {
+            return {show: this.$store.state.loader}
+        }
+    },
+
     created() {
         this.$session.start();
         
@@ -125,10 +142,14 @@ export default {
                             notification_token: currentToken
                         });
                     }
-
                 }).catch((err) => {
+                    if (!messaging.swRegistration) { 
+                        this.$store.commit("showLoader");
+                        this.is_notify = true;
+                        return false;
+                    }
                     console.log('An error occurred while retrieving token. ', err);
-                    alert("Notification is disabled");
+                    alert("Failed to load google firebase notification.");
                 });
 
                 messaging.onMessage((payload) => {
@@ -143,6 +164,7 @@ export default {
                     this.newNotification = true;
                 });
 
+                
             }).catch(this.catchError); // get user
 
         });
@@ -188,6 +210,10 @@ export default {
                 console.log(err.response.data)
             }
         },
+
+        showLoader: function() {
+            this.$store.commit("showLoader");
+        }
         
     },
     beforeDestroy() {
