@@ -214,7 +214,7 @@
                             alert("Successfully ordered\n\nStatus: pending");
 
                             this.sendNotification();
-                            this.$router.push("/orders/" + create_result.id);
+                            this.$router.replace("/orders/" + create_result.id);
 
                         }, (this.catchError)).catch(this.catchError);
                         
@@ -242,7 +242,7 @@
                             return false;
                         }
 
-                        this.$router.push("/payment/" + create_result.id + "/gcash");
+                        this.$router.replace("/payment/" + create_result.id + "/gcash");
                     }, (this.catchError)).catch(this.catchError);
 
                 });
@@ -266,8 +266,7 @@
                             alert("Something went wrong. Please try again (Placing order)");
                             return false;
                         }
-
-                        this.$router.push("/payment/" + create_result.id + "/paypal");
+                        this.$router.replace("/payment/" + create_result.id + "/paypal");
                     }, (this.catchError)).catch(this.catchError);
 
                 });
@@ -292,7 +291,7 @@
                             return false;
                         }
 
-                        this.$router.push("/payment/" + create_result.id + "/card");
+                        this.$router.replace("/payment/" + create_result.id + "/card");
                     }, (this.catchError)).catch(this.catchError);
 
                 });

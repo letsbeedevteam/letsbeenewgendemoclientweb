@@ -36,7 +36,7 @@ export default {
             orderRef.get().then((result) => {
                 if (!result.exists) {
                     alert("Order not found");
-                    this.$route.push("/dashboard");
+                    this.$router.replace("/dashboard");
                 }
 
                 let order = { id: result.id, ...result.data()};
@@ -46,19 +46,19 @@ export default {
                     restaurantCollection.doc(order.restaurant_id).get().then((restaurant_result) => {
                         if (!restaurant_result.exists) {
                             alert("Restaurant not found.");
-                            this.$route.push("/dashboard");
+                            this.$router.replace("/dashboard");
                         }
 
                         let restaurant = { id: restaurant_result.id, ...restaurant_result.data() };
 
                         this.processing = false;
-                        this.$route.push({name: "RestaurantView", params: { restaurant_id: restaurant.id }});
+                        this.$router.push({name: "RestaurantView", params: { restaurant_id: restaurant.id }});
                     }).catch(err => {
                         console.log(err);
                         alert("Something went wrong. Failed to load google firebase. \nbut you've successfull cancel the payment.");
                         
                         this.processing = false;
-                        this.$route.push("/dashboard");
+                        this.$router.replace("/dashboard");
                     }); // get restaurant
 
                 }).catch(this.catchFirebase); // delete order
@@ -75,7 +75,7 @@ export default {
             if (this.is_mobile) {
                 window.location = NETWORK_URL + "/payment/success";
             } else {
-                this.$route.push("/dashboard");
+                this.$router.replace("/dashboard");
             }
         },
 

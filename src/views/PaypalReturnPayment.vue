@@ -31,10 +31,12 @@ export default {
             token: this.$route.query.token,
             payer_id: this.$route.query.PayerID,
             order_id: this.$route.query.order_id,
-            is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false
+            is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false,
+            mobileQuery: null
         }
     },
     created() {
+        this.mobileQuery = this.is_mobile ? "&mobile=true" : "";
 
         var orderRef = orderCollection.doc(this.order_id);
         orderRef.get().then((result) => {

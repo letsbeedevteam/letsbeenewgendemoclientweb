@@ -30,10 +30,12 @@ export default {
             processing: true,
             order_id: this.$route.query.order_id,
             is_mobile: this.$route.query.mobile && this.$route.query.mobile == "true" ? true : false,
-            mobileQuery: this.is_mobile ? "&mobile=true" : "",
+            mobileQuery: null
         }
     },
     created() {
+        this.mobileQuery = this.is_mobile ? "&mobile=true" : "";
+
         var orderRef = orderCollection.doc(this.order_id);
         orderRef.get().then((result) => {
             if (!result.exists) {

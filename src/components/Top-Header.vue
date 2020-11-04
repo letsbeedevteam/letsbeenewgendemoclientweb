@@ -197,7 +197,7 @@ export default {
                     notification.status = false;
                     this.validateNotifications();
                     if (this.$router.currentRoute != '/' + notification.type + '/' + notification.id) {
-                        this.$router.push('/' + notification.type + '/' + notification.id);
+                        this.$router.replace('/' + notification.type + '/' + notification.id);
                     }
                 }
             });
